@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { createTenantForUser, authenticateUser } from '../services/tenantService';
 import { User } from '../db';
+import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -27,14 +28,14 @@ router.post('/login', async (req, res) => {
     }
 });
 
-router.get('/me/:userId', async (req, res) => {
-    const { userId } = req.params;
+router.get('/me', authenticate, async (req: AuthRequest, res) => {
     try {
+        const userId = req.user?.userId;
         const user = await User.findByPk(userId);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        res.json(user);
+        res.json({ id: user.id, email: user.email, tenantId: user.tenantId });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }

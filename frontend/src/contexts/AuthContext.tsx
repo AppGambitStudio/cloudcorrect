@@ -24,19 +24,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-            setUser(JSON.parse(savedUser));
-        }
-        setLoading(false);
+        const initAuth = async () => {
+            const savedUser = localStorage.getItem('user');
+            const savedToken = localStorage.getItem('token');
+
+            if (savedUser && savedToken) {
+                try {
+                    const response = await api.get('/auth/me');
+                    setUser(response.data);
+                } catch (error) {
+                    console.error('Session validation failed', error);
+                    logout();
+                }
+            }
+            setLoading(false);
+        };
+        initAuth();
     }, []);
 
     const signup = async (email: string, password: string, tenantName: string) => {
         try {
             const response = await api.post('/auth/signup', { email, password, tenantName });
-            const newUser = response.data.user;
+            const { user: newUser, token } = response.data;
             setUser(newUser);
             localStorage.setItem('user', JSON.stringify(newUser));
+            localStorage.setItem('token', token);
         } catch (error) {
             console.error('Signup failed', error);
             throw error;
@@ -46,9 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = async (email: string, password: string) => {
         try {
             const response = await api.post('/auth/login', { email, password });
-            const newUser = response.data;
+            const { user: newUser, token } = response.data;
             setUser(newUser);
             localStorage.setItem('user', JSON.stringify(newUser));
+            localStorage.setItem('token', token);
         } catch (error) {
             console.error('Login failed', error);
             throw error;
@@ -58,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = () => {
         setUser(null);
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
     };
 
     return (

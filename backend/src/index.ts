@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import awsAccountRoutes from './routes/awsAccounts';
 import invariantGroupsRoutes from './routes/invariantGroups';
 import { initScheduler } from './services/schedulerService';
+import { authenticate } from './middleware/auth';
 
 dotenv.config();
 
@@ -24,8 +25,8 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
-app.use('/api/aws-accounts', awsAccountRoutes);
-app.use('/api/invariant-groups', invariantGroupsRoutes);
+app.use('/api/aws-accounts', authenticate, awsAccountRoutes);
+app.use('/api/invariant-groups', authenticate, invariantGroupsRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'OK' });

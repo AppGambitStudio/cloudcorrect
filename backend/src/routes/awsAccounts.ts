@@ -1,13 +1,13 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { onboardAWSAccount } from '../services/awsAccountService';
 import { AWSAccount } from '../db';
 import { v4 as uuidv4 } from 'uuid';
+import { AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-router.post('/', async (req, res) => {
+router.post('/', async (req: AuthRequest, res: Response) => {
     const {
-        tenantId,
         awsAccountId,
         name,
         authMethod,
@@ -17,6 +17,11 @@ router.post('/', async (req, res) => {
         secretAccessKey,
         region
     } = req.body;
+    const tenantId = req.user?.tenantId;
+
+    if (!tenantId) {
+        return res.status(401).json({ error: 'Tenant context missing' });
+    }
 
     try {
         const account = await onboardAWSAccount({
@@ -37,8 +42,14 @@ router.post('/', async (req, res) => {
     }
 });
 
-router.get('/:tenantId', async (req, res) => {
-    const { tenantId } = req.params;
+router.get('/:tenantId', async (req: AuthRequest, res: Response) => {
+    const { tenantId: urlTenantId } = req.params;
+    const tenantId = req.user?.tenantId;
+
+    if (urlTenantId !== tenantId) {
+        return res.status(403).json({ error: 'Unauthorized access to tenant data' });
+    }
+
     try {
         const accounts = await AWSAccount.findAll({
             where: { tenantId },

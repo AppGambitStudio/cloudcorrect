@@ -1,12 +1,19 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { InvariantGroup, Check, EvaluationRun, CheckResultLog, AWSAccount } from '../db';
+import { AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-router.post('/', async (req, res) => {
-    const { tenantId, awsAccountId, name, description, intervalMinutes, enabled, notificationEmails, checks } = req.body;
+router.post('/', async (req: AuthRequest, res: Response) => {
+    const { awsAccountId, name, description, intervalMinutes, enabled, notificationEmails, checks } = req.body;
+    const tenantId = req.user?.tenantId;
+
+    if (!tenantId) {
+        return res.status(401).json({ error: 'Tenant context missing' });
+    }
 
     try {
+
         const group = await InvariantGroup.create({
             tenantId,
             awsAccountId,
@@ -36,10 +43,13 @@ router.post('/', async (req, res) => {
     }
 });
 
-router.get('/detail/:id', async (req, res) => {
+router.get('/detail/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
+    const tenantId = req.user?.tenantId;
+
     try {
-        const group = await InvariantGroup.findByPk(id, {
+        const group = await InvariantGroup.findOne({
+            where: { id, tenantId },
             include: [
                 { model: Check, as: 'checks' },
                 { model: AWSAccount }
@@ -47,7 +57,7 @@ router.get('/detail/:id', async (req, res) => {
             order: [[{ model: Check, as: 'checks' }, 'createdAt', 'ASC']]
         });
         if (!group) {
-            return res.status(404).json({ error: 'Group not found' });
+            return res.status(404).json({ error: 'Group not found or unauthorized' });
         }
         res.json(group);
     } catch (error: any) {
@@ -55,8 +65,15 @@ router.get('/detail/:id', async (req, res) => {
     }
 });
 
-router.get('/:tenantId', async (req, res) => {
-    const { tenantId } = req.params;
+// Note: Keeping tenantId in URL for compatibility but enforcing match with JWT
+router.get('/:tenantId', async (req: AuthRequest, res: Response) => {
+    const { tenantId: urlTenantId } = req.params;
+    const tenantId = req.user?.tenantId;
+
+    if (urlTenantId !== tenantId) {
+        return res.status(403).json({ error: 'Unauthorized access to tenant data' });
+    }
+
     try {
         const groups = await InvariantGroup.findAll({
             where: { tenantId },
@@ -72,12 +89,14 @@ router.get('/:tenantId', async (req, res) => {
     }
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
+    const tenantId = req.user?.tenantId;
+
     try {
-        const group = await InvariantGroup.findByPk(id);
+        const group = await InvariantGroup.findOne({ where: { id, tenantId } });
         if (!group) {
-            return res.status(404).json({ error: 'Group not found' });
+            return res.status(404).json({ error: 'Group not found or unauthorized' });
         }
         await group.update(req.body);
         res.json(group);
@@ -86,12 +105,14 @@ router.patch('/:id', async (req, res) => {
     }
 });
 
-router.post('/:id/checks', async (req, res) => {
+router.post('/:id/checks', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
+    const tenantId = req.user?.tenantId;
+
     try {
-        const group = await InvariantGroup.findByPk(id);
+        const group = await InvariantGroup.findOne({ where: { id, tenantId } });
         if (!group) {
-            return res.status(404).json({ error: 'Group not found' });
+            return res.status(404).json({ error: 'Group not found or unauthorized' });
         }
 
         const check = await Check.create({
@@ -125,12 +146,14 @@ router.delete('/:groupId/checks/:checkId', async (req, res) => {
     }
 });
 
-router.patch('/:id/toggle', async (req, res) => {
+router.patch('/:id/toggle', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
+    const tenantId = req.user?.tenantId;
+
     try {
-        const group = await InvariantGroup.findByPk(id);
+        const group = await InvariantGroup.findOne({ where: { id, tenantId } });
         if (!group) {
-            return res.status(404).json({ error: 'Group not found' });
+            return res.status(404).json({ error: 'Group not found or unauthorized' });
         }
         group.enabled = !group.enabled;
         await group.save();
@@ -140,10 +163,14 @@ router.patch('/:id/toggle', async (req, res) => {
     }
 });
 
-router.patch('/:groupId/checks/:checkId', async (req, res) => {
+router.patch('/:groupId/checks/:checkId', async (req: AuthRequest, res: Response) => {
     try {
         const { groupId, checkId } = req.params;
+        const tenantId = req.user?.tenantId;
         const { service, type, scope, region, parameters, alias } = req.body;
+
+        const group = await InvariantGroup.findOne({ where: { id: groupId, tenantId } });
+        if (!group) return res.status(404).json({ error: 'Group not found or unauthorized' });
 
         const check = await Check.findOne({ where: { id: checkId, groupId } });
         if (!check) return res.status(404).json({ error: 'Check not found' });
@@ -163,13 +190,17 @@ router.patch('/:groupId/checks/:checkId', async (req, res) => {
     }
 });
 
-router.get('/:id/history', async (req, res) => {
+router.get('/:id/history', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
+    const tenantId = req.user?.tenantId;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
 
     try {
+        const group = await InvariantGroup.findOne({ where: { id, tenantId } });
+        if (!group) return res.status(404).json({ error: 'Group not found or unauthorized' });
+
         const { count, rows } = await EvaluationRun.findAndCountAll({
             where: { groupId: id },
             order: [['evaluatedAt', 'DESC']],
@@ -200,9 +231,14 @@ router.get('/:id/history', async (req, res) => {
     }
 });
 
-router.post('/:id/evaluate', async (req, res) => {
+router.post('/:id/evaluate', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
+    const tenantId = req.user?.tenantId;
+
     try {
+        const group = await InvariantGroup.findOne({ where: { id, tenantId } });
+        if (!group) return res.status(404).json({ error: 'Group not found or unauthorized' });
+
         const { evaluateGroup } = require('../services/evaluationService');
         const result = await evaluateGroup(id);
         res.json(result);
