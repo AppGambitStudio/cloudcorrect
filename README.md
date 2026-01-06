@@ -35,58 +35,51 @@ How is this different from AWS Config, Trusted Advisor, or traditional monitorin
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+)
-- [Docker](https://www.docker.com/) & Docker Compose
+- [Node.js](https://nodejs.org/) (v18+) - *Required for local development*
+- [Docker](https://www.docker.com/) & Docker Compose - *Required for database & production run*
 
-### 1. Database Setup
+---
 
-Spin up the PostgreSQL database using Docker Compose:
+### 💻 Local Development
 
+Use this for active development and debugging.
+
+#### 1. Start Database
 ```bash
-docker-compose up -d
+docker-compose up -d db
 ```
 
-### 2. Backend Configuration
-
-Navigate to the `backend` directory and install dependencies:
-
+#### 2. Backend Setup
 ```bash
 cd backend
 npm install
-```
-
-Create a `.env` file in the `backend` directory:
-
-```env
-DATABASE_URL=postgres://cloudcorrect:cloudcorrect_pass@localhost:5437/cloudcorrect
-PORT=5001
-# Add any AWS credentials if running locally without environment-based auth
-# AWS_ACCESS_KEY_ID=xxx
-# AWS_SECRET_ACCESS_KEY=xxx
-```
-
-Start the backend:
-
-```bash
 npm run dev
 ```
+*Create a `.env` in `backend/` with `DATABASE_URL=postgres://cloudcorrect:cloudcorrect_pass@localhost:5437/cloudcorrect`*
 
-### 3. Frontend Configuration
-
-Navigate to the `frontend` directory and install dependencies:
-
+#### 3. Frontend Setup
 ```bash
 cd frontend
 npm install
-```
-
-Start the frontend:
-
-```bash
 npm run dev
 ```
+*Frontend runs on [http://localhost:8800](http://localhost:8800)*
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+---
+
+### 🚀 Production Run (Docker)
+
+Use this to run the entire stack (Frontend, Backend, and DB) in production mode.
+
+```bash
+docker-compose up --build -d
+```
+
+- **Frontend**: [http://localhost:8800](http://localhost:8800)
+- **Backend**: [http://localhost:5001](http://localhost:5001)
+- **Database**: PostgreSQL on port 5437
+
+*Note: In production mode, ensure your environmental variables are correctly set in the `docker-compose.yml`.*
 
 ## � Commercial Support & Hosting
 

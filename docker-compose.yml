@@ -11,5 +11,30 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  backend:
+    build:
+      context: ./backend
+    restart: always
+    environment:
+      DATABASE_URL: postgres://cloudcorrect:cloudcorrect_pass@db:5432/cloudcorrect
+      PORT: 5001
+      NODE_ENV: production
+    ports:
+      - "5001:5001"
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5001/api
+      NODE_ENV: production
+    ports:
+      - "8800:8800"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
