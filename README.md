@@ -1,6 +1,6 @@
 # CloudCorrect
 
-Architectural Invariant Monitoring for AWS. Ensure your infrastructure stays exactly as you intended.
+CloudCorrect is an open-source engine for continuously validating cloud architecture correctness using executable invariants.
 
 CloudCorrect helps platform and architecture teams maintain the integrity of their AWS environments by monitoring "Invariants"—architectural rules that must always be true. Whether it's ensuring an EC2 instance is running, a critical S3 bucket is NOT public, or an ECS cluster maintains its desired capacity, CloudCorrect provides real-time visibility and historical proofs of your architectural state.
 
