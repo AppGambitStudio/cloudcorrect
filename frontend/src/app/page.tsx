@@ -14,7 +14,8 @@ import {
   MapPin,
   Share2,
   ShieldCheck,
-  Zap
+  Zap,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -57,12 +58,12 @@ export default function LandingPage() {
           <span>Architectural Ground Truth</span>
         </div>
         <h1 className="text-6xl md:text-7xl font-black text-slate-900 tracking-tighter leading-[0.9] mb-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          Architecture Properties,<br />
-          <span className="text-blue-600">Not Raw Properties.</span>
+          Architectural Truth,<br />
+          <span className="text-blue-600">Not Metric Noise.</span>
         </h1>
         <p className="text-xl md:text-2xl text-slate-500 font-medium max-w-2xl mx-auto mb-12 animate-in fade-in duration-1000 delay-300">
-          CloudCorrect tracks your architectural intent, not just observability trivia.
-          Stop monitoring ripples; start monitoring the structural path.
+          CloudCorrect continuously verifies that your cloud architecture
+          is still wired the way you designed it — even when metrics look fine.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in duration-1000 delay-500">
           <Link href={user ? "/dashboard" : "/login"}>
@@ -123,6 +124,90 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Example Code Section */}
+      <section className="px-8 py-24 bg-white">
+        <div className="max-w-6xl mx-auto p-1 bg-slate-900 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-12 opacity-10 blur-2xl group-hover:opacity-20 transition-opacity">
+            <ShieldCheck size={300} className="text-blue-400" />
+          </div>
+          <div className="p-12 border border-slate-800 rounded-[2.3rem] relative z-10">
+            <h3 className="text-3xl font-bold text-white mb-2">Executable Architecture</h3>
+            <p className="text-slate-500 text-sm mb-12 font-medium">From intent to continuous verification.</p>
+
+            <div className="grid md:grid-cols-2 gap-12">
+              {/* Column 1: Ingress */}
+              <div className="space-y-8">
+                <div className="pb-4 border-b border-slate-800">
+                  <h4 className="text-blue-400 text-xs font-black uppercase tracking-widest">Invariant: Ingress Integrity</h4>
+                </div>
+
+                <div className="space-y-8 font-mono text-[13px] leading-relaxed">
+                  <div className="flex items-start space-x-4">
+                    <span className="text-green-400 mt-1">✓</span>
+                    <div className="flex-1">
+                      <div className="text-slate-500 text-[10px] font-black uppercase mb-1">DNS aligns with load balancer</div>
+                      <pre className="text-blue-400 whitespace-pre-wrap">
+                        {`DNS_POINTS_TO(\n  alias="api-lb",\n  target="{{backend-alb.dnsName}}"\n)`}
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-4">
+                    <span className="text-green-400 mt-1">✓</span>
+                    <div className="flex-1">
+                      <div className="text-slate-500 text-[10px] font-black uppercase mb-1">Load balancer has healthy capacity</div>
+                      <pre className="text-blue-400 whitespace-pre-wrap">
+                        {`TARGET_GROUP_HEALTHY(\n  targetGroupArn="{{main-tg.arn}}",\n  minHealthy=2\n)`}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2: Security & Placement */}
+              <div className="space-y-8">
+                <div className="pb-4 border-b border-slate-800">
+                  <h4 className="text-blue-400 text-xs font-black uppercase tracking-widest">Invariant: Security & Placement</h4>
+                </div>
+
+                <div className="space-y-8 font-mono text-[13px] leading-relaxed">
+                  <div className="flex items-start space-x-4">
+                    <span className="text-green-400 mt-1">✓</span>
+                    <div className="flex-1">
+                      <div className="text-slate-500 text-[10px] font-black uppercase mb-1">Critical assets are stay-locked</div>
+                      <pre className="text-blue-400 whitespace-pre-wrap">
+                        {`S3_BUCKET_PUBLIC_ACCESS_BLOCKED(\n  bucketName="client-assets-prod"\n)`}
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-4">
+                    <span className="text-red-400 mt-1">✗</span>
+                    <div className="flex-1">
+                      <div className="text-slate-400 text-[10px] font-black uppercase mb-1">Compute placement violates design</div>
+                      <pre className="text-red-400/80 whitespace-pre-wrap">
+                        {`IN_SUBNET(\n  instanceId="{{web-1.id}}",\n  subnetId="subnet-0bc2..."\n)`}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-12 pt-8 border-t border-slate-800 space-y-4">
+              <p className="text-red-400 font-bold flex items-center">
+                <ShieldAlert size={18} className="mr-2" />
+                Result: Architecture is not in a correct state.
+              </p>
+              <p className="text-slate-300 text-lg font-medium leading-relaxed max-w-2xl">
+                CloudCorrect doesn’t just report failures —
+                it tells you <span className="text-blue-400 font-bold">which architectural assumption broke</span>, and why.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* The Four Pillars */}
       <section className="px-8 py-32 max-w-7xl mx-auto">
         <div className="text-center mb-20">
@@ -172,28 +257,62 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Example Code Section */}
-      <section className="px-8 py-24 mb-32">
-        <div className="max-w-4xl mx-auto p-1 bg-slate-900 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-12 opacity-10 blur-2xl group-hover:opacity-20 transition-opacity">
-            <ShieldCheck size={300} className="text-blue-400" />
-          </div>
-          <div className="p-12 border border-slate-800 rounded-[2.3rem] relative z-10">
-            <h3 className="text-2xl font-bold text-white mb-8">Executable Architecture</h3>
-            <div className="space-y-6">
-              {[
-                { label: 'Check DNS Alignment', status: 'PASS', code: 'DNS_POINTS_TO( alias="api-lb", target="{{backend-alb.dnsName}}" )' },
-                { label: 'Verify Fleet Health', status: 'PASS', code: 'TARGET_GROUP_HEALTHY( targetGroupArn="{{main-tg.arn}}", minHealthy=2 )' },
-                { label: 'Enforce Placement', status: 'FAIL', code: 'IN_SUBNET( instanceId="{{web-1.id}}", subnetId="subnet-0bc2..." )' }
-              ].map((ex, i) => (
-                <div key={i} className="flex items-center space-x-4 font-mono text-sm">
-                  <span className={`w-12 text-[10px] font-black px-2 py-0.5 rounded text-center ${ex.status === 'PASS' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                    {ex.status}
-                  </span>
-                  <span className="text-slate-400 group-hover:text-slate-300 transition-colors uppercase text-[10px] font-black w-32">{ex.label}</span>
-                  <span className="text-blue-400 flex-1 truncate">{ex.code}</span>
-                </div>
-              ))}
+      {/* Target Audience Section */}
+      <section className="px-8 py-32 bg-slate-50 border-y border-slate-100">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-20">
+            <div>
+              <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-6">
+                Who CloudCorrect <span className="text-blue-600">is Built For.</span>
+              </h2>
+              <p className="text-lg text-slate-600 mb-12 leading-relaxed">
+                CloudCorrect is designed for cloud architectures that are intentionally structured,
+                predictable, and expected to behave consistently over time.
+                It works best when <strong>correctness matters more than constant change.</strong>
+              </p>
+
+              <div className="grid sm:grid-cols-2 gap-8">
+                {[
+                  { title: 'Platform & Infra Teams', desc: 'Responsible for keeping cloud foundations correct at scale.' },
+                  { title: 'Stable Architectures', desc: 'If your architecture is "set and run", CloudCorrect fits naturally.' },
+                  { title: 'Agencies & MSPs', desc: 'Standardize architectural correctness without standardizing the architecture itself.' },
+                  { title: 'Compliance & Migration', desc: 'Perfect for regulated environments or modernization tracking.' }
+                ].map((item, i) => (
+                  <div key={i} className="space-y-2">
+                    <h4 className="font-bold text-slate-900">{item.title}</h4>
+                    <p className="text-sm text-slate-500">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-sm self-start">
+              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-6 text-red-500">
+                Not Designed For.
+              </h2>
+              <p className="text-sm text-slate-400 font-medium mb-8">And that's intentional. We focus on structural correctness, not runtime behavior variance.</p>
+
+              <ul className="space-y-4">
+                {[
+                  'High-churn autoscaling environments',
+                  'Constantly changing ephemeral stacks',
+                  'Event-driven systems with unpredictable topology',
+                  'Real-time performance tuning',
+                  'Metrics-heavy SRE workflows'
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start text-sm font-semibold text-slate-600 italic">
+                    <span className="mr-3 text-red-200">/</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-12 p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                <p className="text-xs font-black uppercase text-slate-400 mb-2 tracking-widest">The Simple Rule of Thumb</p>
+                <p className="text-slate-900 font-bold italic">
+                  "If your cloud architecture is meant to stay correct, CloudCorrect helps ensure it actually does."
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -206,13 +325,9 @@ export default function LandingPage() {
             <Cloud size={24} />
             <span className="font-bold">CloudCorrect</span>
           </div>
-          <div className="flex items-center space-x-6 text-sm font-bold text-slate-500 uppercase tracking-widest">
-            <a href="#" className="hover:text-blue-600">Features</a>
-            <a href="#" className="hover:text-blue-600">Docs</a>
-            <a href="#" className="hover:text-blue-600">Enterprise</a>
-          </div>
+
           <p className="text-xs font-medium text-slate-400">
-            &copy; 2026 APPGAMBiT. Built for architectural integrity.
+            &copy; 2026 <a href="https://appgambit.com" target="_blank" rel="noopener noreferrer">APPGAMBiT</a>. Built for Architectural Integrity.
           </p>
         </div>
       </footer>
