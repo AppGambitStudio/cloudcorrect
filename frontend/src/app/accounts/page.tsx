@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -355,10 +356,12 @@ export default function AccountsPage() {
                                         </>
                                     )}
                                 </div>
-                                <Button variant="outline" size="sm" className="w-full text-slate-600 border-slate-200 bg-white hover:bg-slate-50">
-                                    <ExternalLink size={14} className="mr-2" />
-                                    Account Dashboard
-                                </Button>
+                                <Link href={`/accounts/${account.id}`}>
+                                    <Button variant="outline" size="sm" className="w-full text-slate-600 border-slate-200 bg-white hover:bg-slate-50">
+                                        <ExternalLink size={14} className="mr-2" />
+                                        Account Dashboard
+                                    </Button>
+                                </Link>
                             </div>
                         </CardContent>
                     </Card>
