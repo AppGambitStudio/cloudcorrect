@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import api from '@/lib/api';
 import { Plus, ExternalLink, Trash2, Key, Shield, Cloud } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,7 +17,8 @@ import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 
 export default function AccountsPage() {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
+    const router = useRouter();
     const [accounts, setAccounts] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +35,12 @@ export default function AccountsPage() {
         secretAccessKey: '',
         region: 'us-east-1',
     });
+
+    useEffect(() => {
+        if (!loading && !user) {
+            router.push('/login');
+        }
+    }, [user, loading, router]);
 
     useEffect(() => {
         if (user) {
@@ -102,6 +110,9 @@ export default function AccountsPage() {
 
         window.open(url, '_blank');
     };
+
+    if (loading) return <div className="flex items-center justify-center min-h-screen font-bold text-slate-400">Loading your accounts...</div>;
+    if (!user) return null;
 
     return (
         <div className="p-8">

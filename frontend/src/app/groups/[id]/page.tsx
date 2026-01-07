@@ -49,11 +49,13 @@ import { useConfirm } from '@/hooks/useConfirm';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = use(params);
     const { id } = resolvedParams;
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
+    const router = useRouter();
     const confirm = useConfirm();
 
     const [group, setGroup] = useState<any>(null);
@@ -74,6 +76,12 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         parameters: {} as any,
     });
     const [editingCheckId, setEditingCheckId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!loading && !user) {
+            router.push('/login');
+        }
+    }, [user, loading, router]);
 
     useEffect(() => {
         if (user && id) {
@@ -230,7 +238,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         setNewCheck({ ...newCheck, service: service as any, type, scope, alias: '', parameters: {} });
     };
 
-    if (isLoading) {
+    if (loading) {
         return (
             <div className="p-8 flex items-center justify-center min-h-screen">
                 <RotateCw className="animate-spin text-blue-600" size={32} />
@@ -238,6 +246,16 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         );
     }
 
+    if (!user) return null;
+
+    if (isLoading) {
+        return (
+            <div className="p-8 flex items-center justify-center min-h-screen">
+                <RotateCw className="animate-spin text-blue-600" size={32} />
+                <span className="ml-2 font-medium text-slate-500">Loading audit details...</span>
+            </div>
+        );
+    }
     if (!group) {
         return <div className="p-8 text-center">Group not found</div>;
     }

@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Plus, CheckCircle2, XCircle, Play, Settings, History, RotateCw, ExternalLink, Pause, PlayCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,8 @@ import toast from 'react-hot-toast';
 import Link from 'next/link';
 
 export default function GroupsPage() {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
+    const router = useRouter();
     const [groups, setGroups] = useState([]);
     const [accounts, setAccounts] = useState([]);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -29,6 +31,12 @@ export default function GroupsPage() {
         intervalMinutes: 5,
         notificationEmails: '',
     });
+
+    useEffect(() => {
+        if (!loading && !user) {
+            router.push('/login');
+        }
+    }, [user, loading, router]);
 
     useEffect(() => {
         if (user) {
@@ -95,6 +103,9 @@ export default function GroupsPage() {
             setIsEvaluating(null);
         }
     };
+
+    if (loading) return <div className="flex items-center justify-center min-h-screen font-bold text-slate-400">Loading your audits...</div>;
+    if (!user) return null;
 
     return (
         <div className="p-8 max-w-7xl mx-auto">

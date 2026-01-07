@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +51,8 @@ interface AnalyticsData {
 
 export default function AccountDashboardPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const { user, loading } = useAuth();
+    const router = useRouter();
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -65,8 +69,27 @@ export default function AccountDashboardPage({ params }: { params: Promise<{ id:
     };
 
     useEffect(() => {
-        fetchAnalytics();
-    }, [id]);
+        if (!loading && !user) {
+            router.push('/login');
+        }
+    }, [user, loading, router]);
+
+    useEffect(() => {
+        if (user) {
+            fetchAnalytics();
+        }
+    }, [id, user]);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen font-bold text-slate-400">
+                <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mr-2" />
+                Loading account dashboard...
+            </div>
+        );
+    }
+
+    if (!user) return null;
 
     if (isLoading) {
         return (
@@ -75,7 +98,6 @@ export default function AccountDashboardPage({ params }: { params: Promise<{ id:
             </div>
         );
     }
-
     if (!data) {
         return (
             <div className="p-8 text-center">
