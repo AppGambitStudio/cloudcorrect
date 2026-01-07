@@ -42,7 +42,7 @@ export const onboardAWSAccount = async (params: OnboardParams) => {
 export const generateCloudFormationUrl = (tenantId: string, externalId: string) => {
     const stackName = 'CloudCorrect-ReadOnly-Role';
     // Updated path to point to a more descriptive (mock) URL
-    const templatePath = 'https://cloudcorrect-templates.s3.amazonaws.com/cloudcorrect-readonly-role.yaml';
+    const templatePath = 'https://ag-labs-templete.s3.us-east-1.amazonaws.com/cloudcorrect/cloudcorrect-readonly-role.yaml';
 
     return `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=${stackName}&templateURL=${templatePath}&param_ExternalId=${externalId}&param_TenantId=${tenantId}`;
 };
