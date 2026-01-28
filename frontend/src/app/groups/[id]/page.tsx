@@ -50,6 +50,9 @@ import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { SERVICES, OPERATORS, getCheckType, getService, type ServiceId } from '@/lib/checksReference';
+import { HelpTooltip, InlineHelpTooltip } from '@/components/ui/help-tooltip';
+import { CheckWizard, type CheckWizardData } from '@/components/CheckWizard';
 
 export default function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = use(params);
@@ -77,6 +80,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         parameters: {} as any,
     });
     const [editingCheckId, setEditingCheckId] = useState<string | null>(null);
+    const [isWizardOpen, setIsWizardOpen] = useState(false);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -183,6 +187,25 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             setIsDialogOpen(false);
         } catch (error) {
             toast.error('Failed to add check');
+        }
+    };
+
+    const handleWizardComplete = async (data: CheckWizardData) => {
+        try {
+            const checkData = {
+                service: data.service,
+                type: data.type,
+                scope: data.scope,
+                region: data.region,
+                alias: data.alias,
+                operator: data.operator,
+                parameters: data.parameters,
+            };
+            const response = await api.post(`/invariant-groups/${id}/checks`, checkData);
+            setGroup({ ...group, checks: [...(group.checks || []), response.data] });
+            toast.success('Check created successfully via wizard');
+        } catch (error) {
+            toast.error('Failed to create check');
         }
     };
 
@@ -492,154 +515,109 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                 </DialogHeader>
                                 <div className="space-y-4 py-4">
                                     <div className="space-y-2">
-                                        <Label>AWS Service</Label>
+                                        <Label className="flex items-center">
+                                            AWS Service
+                                            <InlineHelpTooltip content="Select the AWS service you want to monitor. Each service offers specific check types." />
+                                        </Label>
                                         <Select
                                             value={newCheck.service}
                                             onValueChange={handleServiceChange}
                                             disabled={!!editingCheckId}
                                         >
                                             <SelectTrigger className="h-12 border-slate-200">
-                                                <SelectValue />
+                                                <SelectValue>
+                                                    {newCheck.service && (
+                                                        <div className="flex items-center">
+                                                            <span className="mr-2">
+                                                                {newCheck.service === 'EC2' && <Server size={16} className="text-slate-600" />}
+                                                                {newCheck.service === 'ALB' && <Activity size={16} className="text-slate-600" />}
+                                                                {newCheck.service === 'Route53' && <Globe size={16} className="text-slate-600" />}
+                                                                {newCheck.service === 'IAM' && <Shield size={16} className="text-slate-600" />}
+                                                                {newCheck.service === 'S3' && <Database size={16} className="text-slate-600" />}
+                                                                {newCheck.service === 'NETWORK' && <Zap size={16} className="text-slate-600" />}
+                                                                {newCheck.service === 'RDS' && <Database size={16} className="text-blue-500" />}
+                                                                {newCheck.service === 'ECS' && <Layers size={16} className="text-orange-500" />}
+                                                                {newCheck.service === 'DynamoDB' && <Database size={16} className="text-purple-500" />}
+                                                                {newCheck.service === 'Lambda' && <Zap size={16} className="text-orange-500" />}
+                                                                {newCheck.service === 'CloudFront' && <Globe size={16} className="text-blue-500" />}
+                                                                {newCheck.service === 'ConfigService' && <Shield size={16} className="text-green-500" />}
+                                                            </span>
+                                                            {SERVICES[newCheck.service as ServiceId]?.name || newCheck.service}
+                                                        </div>
+                                                    )}
+                                                </SelectValue>
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="EC2">EC2 Instances</SelectItem>
-                                                <SelectItem value="ALB">Load Balancers (ALB)</SelectItem>
-                                                <SelectItem value="Route53">Route 53 DNS</SelectItem>
-                                                <SelectItem value="IAM">IAM Security</SelectItem>
-                                                <SelectItem value="S3">S3 Storage</SelectItem>
-                                                <SelectItem value="NETWORK">Network Health</SelectItem>
-                                                <SelectItem value="RDS">RDS Database</SelectItem>
-                                                <SelectItem value="ECS">ECS Container Service</SelectItem>
-                                                <SelectItem value="DynamoDB">DynamoDB</SelectItem>
-                                                <SelectItem value="Lambda">Lambda Functions</SelectItem>
-                                                <SelectItem value="CloudFront">CloudFront CDN</SelectItem>
-                                                <SelectItem value="ConfigService">AWS Config</SelectItem>
+                                                {Object.values(SERVICES).map((service) => (
+                                                    <SelectItem key={service.id} value={service.id} className="py-3">
+                                                        <div className="flex items-start">
+                                                            <span className="mr-3 mt-0.5">
+                                                                {service.id === 'EC2' && <Server size={16} className="text-slate-600" />}
+                                                                {service.id === 'ALB' && <Activity size={16} className="text-slate-600" />}
+                                                                {service.id === 'Route53' && <Globe size={16} className="text-slate-600" />}
+                                                                {service.id === 'IAM' && <Shield size={16} className="text-slate-600" />}
+                                                                {service.id === 'S3' && <Database size={16} className="text-slate-600" />}
+                                                                {service.id === 'NETWORK' && <Zap size={16} className="text-slate-600" />}
+                                                                {service.id === 'RDS' && <Database size={16} className="text-blue-500" />}
+                                                                {service.id === 'ECS' && <Layers size={16} className="text-orange-500" />}
+                                                                {service.id === 'DynamoDB' && <Database size={16} className="text-purple-500" />}
+                                                                {service.id === 'Lambda' && <Zap size={16} className="text-orange-500" />}
+                                                                {service.id === 'CloudFront' && <Globe size={16} className="text-blue-500" />}
+                                                                {service.id === 'ConfigService' && <Shield size={16} className="text-green-500" />}
+                                                            </span>
+                                                            <div>
+                                                                <div className="font-medium">{service.name}</div>
+                                                                <div className="text-xs text-slate-500 mt-0.5 max-w-[280px] whitespace-normal">{service.description.split('.')[0]}.</div>
+                                                            </div>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Assertion Type</Label>
+                                        <Label className="flex items-center">
+                                            Assertion Type
+                                            <InlineHelpTooltip content="Choose what condition you want to verify. Each type checks a specific aspect of the selected AWS service." />
+                                        </Label>
                                         <Select
                                             value={newCheck.type}
-                                            onValueChange={(val) => setNewCheck({ ...newCheck, type: val, parameters: {} })}
+                                            onValueChange={(val) => {
+                                                const checkType = getCheckType(newCheck.service as ServiceId, val);
+                                                const defaultOperator = checkType?.defaultOperator || 'EQUALS';
+                                                setNewCheck({ ...newCheck, type: val, parameters: {}, operator: defaultOperator as any });
+                                            }}
                                         >
                                             <SelectTrigger className="h-12 border-slate-200">
-                                                <SelectValue />
+                                                <SelectValue>
+                                                    {newCheck.type && getCheckType(newCheck.service as ServiceId, newCheck.type)?.name || newCheck.type}
+                                                </SelectValue>
                                             </SelectTrigger>
-                                            <SelectContent>
-                                                {newCheck.service === 'EC2' && (
-                                                    <>
-                                                        <SelectItem value="INSTANCE_RUNNING">Instance is Running</SelectItem>
-                                                        <SelectItem value="INSTANCE_HAS_PUBLIC_IP">Instance has Public IP</SelectItem>
-                                                        <SelectItem value="HAS_PUBLIC_IP">Has Public IP</SelectItem>
-                                                        <SelectItem value="IN_SECURITY_GROUP">In Security Group</SelectItem>
-                                                        <SelectItem value="IN_SUBNET">In Subnet</SelectItem>
-                                                        <SelectItem value="DEFAULT_VPC">Default VPC</SelectItem>
-                                                        <SelectItem value="RUNNING_INSTANCE_COUNT">Running Instance Count</SelectItem>
-                                                        <SelectItem value="INSTANCE_COUNT">Instance Count</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'ALB' && (
-                                                    <>
-                                                        <SelectItem value="TARGET_GROUP_HEALTHY">Target Group Healthy</SelectItem>
-                                                        <SelectItem value="TARGET_GROUP_HEALTHY_COUNT">Target Group Healthy Count</SelectItem>
-                                                        <SelectItem value="ALB_LISTENER_EXISTS">Listener Exists</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'Route53' && (
-                                                    <>
-                                                        <SelectItem value="DNS_POINTS_TO">DNS Points To</SelectItem>
-                                                        <SelectItem value="RECORD_EXISTS">Record Exists</SelectItem>
-                                                        <SelectItem value="TTL_EQUALS">TTL Equals</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'IAM' && (
-                                                    <>
-                                                        <SelectItem value="ROLE_EXISTS">Role Exists</SelectItem>
-                                                        <SelectItem value="ROLE_HAS_POLICY">Role Has Policy</SelectItem>
-                                                        <SelectItem value="POLICY_ATTACHED_TO_RESOURCE">Policy Attached to Resource</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'S3' && (
-                                                    <>
-                                                        <SelectItem value="S3_BUCKET_EXISTS">Bucket Exists</SelectItem>
-                                                        <SelectItem value="S3_BUCKET_POLICY_PRESENT">Policy Present</SelectItem>
-                                                        <SelectItem value="S3_BUCKET_PUBLIC_ACCESS_BLOCKED">Public Access Blocked</SelectItem>
-                                                        <SelectItem value="S3_LIFECYCLE_CONFIGURED">Lifecycle Configured</SelectItem>
-                                                        <SelectItem value="S3_OBJECT_EXISTS">Object Exists</SelectItem>
-                                                        <SelectItem value="S3_BUCKET_COUNT">Bucket Count</SelectItem>
-                                                        <SelectItem value="S3_OBJECT_COUNT">Object Count (in bucket)</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'NETWORK' && (
-                                                    <>
-                                                        <SelectItem value="HTTP_200">HTTP 200 OK</SelectItem>
-                                                        <SelectItem value="HTTP_RESPONSE_CONTAINS">HTTP Response Contains</SelectItem>
-                                                        <SelectItem value="PING">ICMP Ping</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'RDS' && (
-                                                    <>
-                                                        <SelectItem value="RDS_INSTANCE_AVAILABLE">Instance Available</SelectItem>
-                                                        <SelectItem value="RDS_IN_SUBNET_GROUP">In Subnet Group</SelectItem>
-                                                        <SelectItem value="RDS_PUBLIC_ACCESS_DISABLED">Public Access Disabled</SelectItem>
-                                                        <SelectItem value="RDS_ENCRYPTION_ENABLED">Encryption Enabled</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'ECS' && (
-                                                    <>
-                                                        <SelectItem value="ECS_SERVICE_RUNNING">Running (Sufficient)</SelectItem>
-                                                        <SelectItem value="ECS_SERVICE_RUNNING_COUNT_EQUALS_DESIRED">Running (Exact)</SelectItem>
-                                                        <SelectItem value="ECS_RUNNING_TASK_COUNT">Running Task Count</SelectItem>
-                                                        <SelectItem value="ECS_TASK_DEFINITION_REVISION_ACTIVE">Task Def Revision Active</SelectItem>
-                                                        <SelectItem value="ECS_SERVICE_ATTACHED_TO_ALB">Attached to ALB</SelectItem>
-                                                        <SelectItem value="ECS_CLUSTER_ACTIVE">Cluster Active</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'DynamoDB' && (
-                                                    <>
-                                                        <SelectItem value="TABLE_EXISTS">Table Exists</SelectItem>
-                                                        <SelectItem value="TABLE_STATUS_ACTIVE">Table Status Active</SelectItem>
-                                                        <SelectItem value="BILLING_MODE_MATCHES">Billing Mode Matches</SelectItem>
-                                                        <SelectItem value="POINT_IN_TIME_RECOVERY_ENABLED">Point-in-Time Recovery Enabled</SelectItem>
-                                                        <SelectItem value="ENCRYPTION_ENABLED">Encryption Enabled</SelectItem>
-                                                        <SelectItem value="DELETION_PROTECTION_ENABLED">Deletion Protection Enabled</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'Lambda' && (
-                                                    <>
-                                                        <SelectItem value="VPC_CONFIGURED">VPC Configured</SelectItem>
-                                                        <SelectItem value="RESERVED_CONCURRENCY_SET">Reserved Concurrency Set</SelectItem>
-                                                        <SelectItem value="FUNCTION_URL_AUTH_TYPE">Function URL Auth Type</SelectItem>
-                                                        <SelectItem value="ENVIRONMENT_VARIABLE_EXISTS">Environment Variable Exists</SelectItem>
-                                                        <SelectItem value="LAYER_ATTACHED">Layer Attached</SelectItem>
-                                                        <SelectItem value="DEAD_LETTER_QUEUE_CONFIGURED">Dead Letter Queue Configured</SelectItem>
-                                                        <SelectItem value="LAMBDA_FUNCTION_COUNT">Function Count</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'CloudFront' && (
-                                                    <>
-                                                        <SelectItem value="DISTRIBUTION_EXISTS">Distribution Exists</SelectItem>
-                                                        <SelectItem value="DISTRIBUTION_ENABLED">Distribution Enabled</SelectItem>
-                                                        <SelectItem value="ORIGIN_EXISTS">Origin Exists</SelectItem>
-                                                        <SelectItem value="DEFAULT_ROOT_OBJECT_SET">Default Root Object Set</SelectItem>
-                                                        <SelectItem value="VIEWER_PROTOCOL_HTTPS_ONLY">Viewer Protocol HTTPS Only</SelectItem>
-                                                        <SelectItem value="WAF_ENABLED">WAF Enabled</SelectItem>
-                                                        <SelectItem value="ORIGIN_ACCESS_CONTROL_CONFIGURED">Origin Access Control Configured</SelectItem>
-                                                    </>
-                                                )}
-                                                {newCheck.service === 'ConfigService' && (
-                                                    <>
-                                                        <SelectItem value="CONFIG_RECORDER_ACTIVE">Config Recorder Active</SelectItem>
-                                                        <SelectItem value="CONFIG_RULE_COMPLIANT">Config Rule Compliant</SelectItem>
-                                                        <SelectItem value="DELIVERY_CHANNEL_CONFIGURED">Delivery Channel Configured</SelectItem>
-                                                        <SelectItem value="RESOURCE_COMPLIANT">Resource Compliant</SelectItem>
-                                                        <SelectItem value="CONFORMANCE_PACK_COMPLIANT">Conformance Pack Compliant</SelectItem>
-                                                        <SelectItem value="AGGREGATOR_CONFIGURED">Aggregator Configured</SelectItem>
-                                                    </>
-                                                )}
+                                            <SelectContent className="max-h-[300px]">
+                                                {SERVICES[newCheck.service as ServiceId]?.checkTypes.map((checkType) => (
+                                                    <SelectItem key={checkType.id} value={checkType.id} className="py-3">
+                                                        <div>
+                                                            <div className="flex items-center">
+                                                                <span className="font-medium">{checkType.name}</span>
+                                                                {checkType.supportsOperator && (
+                                                                    <Badge variant="outline" className="ml-2 text-[9px] h-4 px-1.5 bg-purple-50 text-purple-600 border-purple-200">
+                                                                        Operator
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 mt-0.5 max-w-[320px] whitespace-normal">{checkType.description}</div>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
+                                        {newCheck.type && getCheckType(newCheck.service as ServiceId, newCheck.type) && (
+                                            <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 mt-2">
+                                                <p className="text-xs text-blue-700">
+                                                    <span className="font-semibold">When to use:</span> {getCheckType(newCheck.service as ServiceId, newCheck.type)?.whenToUse}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -654,30 +632,64 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label>Operator</Label>
-                                        <Select
-                                            value={newCheck.operator}
-                                            onValueChange={(val) => setNewCheck({ ...newCheck, operator: val as any })}
-                                        >
-                                            <SelectTrigger className="h-12 border-slate-200">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="EQUALS">Equals</SelectItem>
-                                                <SelectItem value="NOT_EQUALS">Not Equals</SelectItem>
-                                                <SelectItem value="CONTAINS">Contains</SelectItem>
-                                                <SelectItem value="NOT_CONTAINS">Not Contains</SelectItem>
-                                                <SelectItem value="GREATER_THAN">Greater Than</SelectItem>
-                                                <SelectItem value="LESS_THAN">Less Than</SelectItem>
-                                                <SelectItem value="GREATER_THAN_OR_EQUALS">Greater Than or Equals</SelectItem>
-                                                <SelectItem value="LESS_THAN_OR_EQUALS">Less Than or Equals</SelectItem>
-                                                <SelectItem value="IN_LIST">In List</SelectItem>
-                                                <SelectItem value="NOT_IN_LIST">Not In List</SelectItem>
-                                                <SelectItem value="IS_EMPTY">Is Empty</SelectItem>
-                                                <SelectItem value="IS_NOT_EMPTY">Is Not Empty</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <p className="text-[10px] text-slate-400">How to compare the observed value against the expected value</p>
+                                        <Label className="flex items-center">
+                                            Operator
+                                            <InlineHelpTooltip
+                                                content={
+                                                    <div className="space-y-2">
+                                                        <p className="font-semibold">Comparison Operators</p>
+                                                        <p>Determines how the actual value is compared against your expected value:</p>
+                                                        <ul className="list-disc pl-4 space-y-1 text-xs">
+                                                            <li><span className="font-medium">Equals/Not Equals</span> - Exact match comparison</li>
+                                                            <li><span className="font-medium">Contains/Not Contains</span> - Substring matching</li>
+                                                            <li><span className="font-medium">Greater/Less Than</span> - Numeric comparisons</li>
+                                                            <li><span className="font-medium">In/Not In List</span> - Check against multiple values</li>
+                                                        </ul>
+                                                    </div>
+                                                }
+                                                maxWidth={320}
+                                            />
+                                        </Label>
+                                        {(() => {
+                                            const checkType = getCheckType(newCheck.service as ServiceId, newCheck.type);
+                                            const supportsOperator = checkType?.supportsOperator ?? false;
+                                            return (
+                                                <>
+                                                    <Select
+                                                        value={newCheck.operator}
+                                                        onValueChange={(val) => setNewCheck({ ...newCheck, operator: val as any })}
+                                                        disabled={!supportsOperator}
+                                                    >
+                                                        <SelectTrigger className={cn("h-12 border-slate-200", !supportsOperator && "opacity-50 cursor-not-allowed")}>
+                                                            <SelectValue>
+                                                                {OPERATORS.find(op => op.value === newCheck.operator)?.label || newCheck.operator}
+                                                            </SelectValue>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {OPERATORS.map((op) => (
+                                                                <SelectItem key={op.value} value={op.value} className="py-2">
+                                                                    <div>
+                                                                        <div className="font-medium">{op.label}</div>
+                                                                        <div className="text-xs text-slate-500">{op.description}</div>
+                                                                    </div>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {!supportsOperator && (
+                                                        <p className="text-[10px] text-amber-600 flex items-center">
+                                                            <Info size={10} className="mr-1" />
+                                                            This check type uses a fixed comparison method
+                                                        </p>
+                                                    )}
+                                                    {supportsOperator && (
+                                                        <p className="text-[10px] text-slate-400">
+                                                            {checkType?.defaultOperator && `Recommended: ${OPERATORS.find(op => op.value === checkType.defaultOperator)?.label}`}
+                                                        </p>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
 
                                     {newCheck.scope === 'REGIONAL' && (
@@ -693,8 +705,77 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                     )}
 
                                     <div className="space-y-3">
-                                        <Label>Parameters</Label>
-                                        {newCheck.service === 'EC2' ? (
+                                        <Label className="flex items-center">
+                                            Parameters
+                                            <InlineHelpTooltip content="Configure the specific values for this check. Required fields are marked with a red asterisk." />
+                                        </Label>
+                                        {/* Dynamic parameter rendering based on checksReference */}
+                                        {(() => {
+                                            const checkType = getCheckType(newCheck.service as ServiceId, newCheck.type);
+                                            const params = checkType?.parameters || [];
+
+                                            // Helper function to render parameter input with help and required marker
+                                            const renderParamField = (param: typeof params[0], value: any, onChange: (val: string) => void) => (
+                                                <div key={param.name} className="space-y-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs font-medium text-slate-600">
+                                                            {param.label}
+                                                        </span>
+                                                        {param.required && <span className="text-red-500 text-xs">*</span>}
+                                                        <InlineHelpTooltip content={param.help} iconSize={11} />
+                                                    </div>
+                                                    {param.type === 'select' && param.options ? (
+                                                        <Select value={value || ''} onValueChange={onChange}>
+                                                            <SelectTrigger className="h-12 border-slate-200">
+                                                                <SelectValue placeholder={param.placeholder} />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {param.options.map(opt => (
+                                                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder={param.placeholder}
+                                                            type={param.type === 'number' ? 'number' : 'text'}
+                                                            min={param.validation?.min}
+                                                            max={param.validation?.max}
+                                                            value={value || ''}
+                                                            onChange={(e) => onChange(e.target.value)}
+                                                        />
+                                                    )}
+                                                </div>
+                                            );
+
+                                            // If we have checksReference params, render them dynamically
+                                            if (params.length > 0) {
+                                                return (
+                                                    <div className="space-y-3">
+                                                        {params.map(param =>
+                                                            renderParamField(
+                                                                param,
+                                                                newCheck.parameters[param.name],
+                                                                (val) => {
+                                                                    const parsedVal = param.type === 'number' ? (val === '' ? '' : parseInt(val) || 0) : val;
+                                                                    setNewCheck({
+                                                                        ...newCheck,
+                                                                        parameters: { ...newCheck.parameters, [param.name]: parsedVal }
+                                                                    });
+                                                                }
+                                                            )
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+
+                                            // Fallback to original parameter inputs for backwards compatibility
+                                            return null;
+                                        })()}
+
+                                        {/* Fallback: Legacy parameter inputs (only shown if no checksReference params) */}
+                                        {!getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'EC2' ? (
                                             <div className="space-y-2">
                                                 {['INSTANCE_RUNNING', 'INSTANCE_HAS_PUBLIC_IP', 'HAS_PUBLIC_IP', 'IN_SECURITY_GROUP', 'IN_SUBNET'].includes(newCheck.type) && (
                                                     <Input
@@ -759,7 +840,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     </>
                                                 )}
                                             </div>
-                                        ) : newCheck.service === 'ALB' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'ALB' ? (
                                             <div className="space-y-2">
                                                 {(newCheck.type === 'TARGET_GROUP_HEALTHY' || newCheck.type === 'TARGET_GROUP_HEALTHY_COUNT') ? (
                                                     <>
@@ -800,7 +881,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     </>
                                                 )}
                                             </div>
-                                        ) : newCheck.service === 'Route53' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'Route53' ? (
                                             <div className="space-y-2">
                                                 <Input
                                                     className="border-slate-200"
@@ -831,7 +912,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, hostedZoneId: e.target.value } })}
                                                 />
                                             </div>
-                                        ) : newCheck.service === 'IAM' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'IAM' ? (
                                             <div className="space-y-2">
                                                 <Input
                                                     className="border-slate-200"
@@ -848,7 +929,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     />
                                                 )}
                                             </div>
-                                        ) : newCheck.service === 'S3' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'S3' ? (
                                             <div className="space-y-2">
                                                 {newCheck.type === 'S3_BUCKET_COUNT' ? (
                                                     <>
@@ -910,7 +991,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     </>
                                                 )}
                                             </div>
-                                        ) : newCheck.service === 'NETWORK' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'NETWORK' ? (
                                             <div className="space-y-2">
                                                 <Input
                                                     className="h-12 border-slate-200"
@@ -930,7 +1011,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     />
                                                 )}
                                             </div>
-                                        ) : newCheck.service === 'RDS' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'RDS' ? (
                                             <div className="space-y-2">
                                                 <Input
                                                     className="h-12 border-slate-200"
@@ -947,7 +1028,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     />
                                                 )}
                                             </div>
-                                        ) : newCheck.service === 'ECS' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'ECS' ? (
                                             <div className="space-y-2">
                                                 <Input
                                                     className="h-12 border-slate-200"
@@ -989,7 +1070,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     </>
                                                 )}
                                             </div>
-                                        ) : newCheck.service === 'DynamoDB' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'DynamoDB' ? (
                                             <div className="space-y-2">
                                                 <Input
                                                     className="h-12 border-slate-200"
@@ -1012,7 +1093,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     </Select>
                                                 )}
                                             </div>
-                                        ) : newCheck.service === 'Lambda' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'Lambda' ? (
                                             <div className="space-y-2">
                                                 {newCheck.type === 'LAMBDA_FUNCTION_COUNT' ? (
                                                     <>
@@ -1081,7 +1162,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     </>
                                                 )}
                                             </div>
-                                        ) : newCheck.service === 'CloudFront' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'CloudFront' ? (
                                             <div className="space-y-2">
                                                 <Input
                                                     className="h-12 border-slate-200"
@@ -1114,7 +1195,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     />
                                                 )}
                                             </div>
-                                        ) : newCheck.service === 'ConfigService' ? (
+                                        ) : !getCheckType(newCheck.service as ServiceId, newCheck.type)?.parameters?.length && newCheck.service === 'ConfigService' ? (
                                             <div className="space-y-2">
                                                 {newCheck.type === 'CONFIG_RECORDER_ACTIVE' && (
                                                     <Input
@@ -1296,12 +1377,49 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                         ))}
 
                         {group.checks?.length === 0 && (
-                            <div className="text-center py-24 border-2 border-dashed rounded-3xl bg-slate-50/30">
-                                <Shield size={48} className="mx-auto text-slate-200 mb-4" />
-                                <h3 className="text-lg font-medium text-slate-400">No invariants defined yet</h3>
-                                <p className="text-slate-400 max-w-xs mx-auto text-sm mt-1">
-                                    Click the "New Assertion" button to add your first architectural assertion.
+                            <div className="text-center py-16 border-2 border-dashed rounded-3xl bg-gradient-to-b from-slate-50/50 to-blue-50/30">
+                                <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-blue-100/50 flex items-center justify-center">
+                                    <Shield size={32} className="text-blue-500" />
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2">Get Started with Your First Check</h3>
+                                <p className="text-slate-500 max-w-md mx-auto text-sm mb-6">
+                                    Architectural checks help you continuously verify that your AWS infrastructure
+                                    matches your intended design. Start by adding your first assertion.
                                 </p>
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                    <Button
+                                        onClick={() => setIsWizardOpen(true)}
+                                        className="bg-blue-600 hover:bg-blue-700 h-11 px-8 rounded-xl shadow-lg shadow-blue-100 font-semibold"
+                                    >
+                                        <Plus size={18} className="mr-2" />
+                                        Create Check with Wizard
+                                    </Button>
+                                    <span className="text-slate-400 text-sm">or</span>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setIsDialogOpen(true)}
+                                        className="h-11 px-6 rounded-xl border-slate-200"
+                                    >
+                                        Add Manually
+                                    </Button>
+                                </div>
+                                <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto px-4">
+                                    <div className="p-4 rounded-xl bg-white/80 border border-slate-100 text-left">
+                                        <Server size={20} className="text-slate-400 mb-2" />
+                                        <h4 className="font-semibold text-slate-700 text-sm">EC2 Instance Checks</h4>
+                                        <p className="text-xs text-slate-500 mt-1">Verify instances are running and properly configured</p>
+                                    </div>
+                                    <div className="p-4 rounded-xl bg-white/80 border border-slate-100 text-left">
+                                        <Database size={20} className="text-slate-400 mb-2" />
+                                        <h4 className="font-semibold text-slate-700 text-sm">Database Monitoring</h4>
+                                        <p className="text-xs text-slate-500 mt-1">Ensure RDS and DynamoDB tables are healthy</p>
+                                    </div>
+                                    <div className="p-4 rounded-xl bg-white/80 border border-slate-100 text-left">
+                                        <Globe size={20} className="text-slate-400 mb-2" />
+                                        <h4 className="font-semibold text-slate-700 text-sm">DNS & Network</h4>
+                                        <p className="text-xs text-slate-500 mt-1">Validate Route53 records and connectivity</p>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1349,6 +1467,13 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            {/* Check Creation Wizard */}
+            <CheckWizard
+                open={isWizardOpen}
+                onOpenChange={setIsWizardOpen}
+                onComplete={handleWizardComplete}
+            />
         </div>
     );
 }
