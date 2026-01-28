@@ -537,6 +537,23 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                             Current Architectural Invariants
                             <Badge variant="secondary" className="ml-3 font-medium">{group.checks?.length || 0}</Badge>
                         </h3>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                className="h-10 border-amber-200 text-amber-700 hover:bg-amber-50"
+                                onClick={() => setIsTemplateSelectorOpen(true)}
+                            >
+                                <FileText size={16} className="mr-2" />
+                                Use Template
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="h-10"
+                                onClick={() => setIsWizardOpen(true)}
+                            >
+                                <Settings size={16} className="mr-2" />
+                                Wizard
+                            </Button>
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button className="bg-slate-900 h-10 shadow-sm" onClick={() => {
@@ -1354,6 +1371,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                 </div>
                             </DialogContent>
                         </Dialog>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4">
