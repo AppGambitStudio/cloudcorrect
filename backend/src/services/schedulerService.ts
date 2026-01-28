@@ -22,6 +22,13 @@ export const initScheduler = () => {
                     console.log(`Evaluating group: ${group.name}`);
                     try {
                         const result = await evaluateGroup(group.id);
+
+                        // Skip alerting if no checks defined
+                        if (result.skipped) {
+                            console.log(`Skipping group ${group.name}: ${result.reason}`);
+                            continue;
+                        }
+
                         if (result.changed || result.status === 'FAIL') {
                             if (result.changed) {
                                 console.log(`ALERT: Group ${group.name} status changed from ${result.oldStatus} to ${result.status}`);

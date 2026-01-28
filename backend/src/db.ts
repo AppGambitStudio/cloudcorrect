@@ -197,11 +197,12 @@ InvariantGroup.init(
 export class Check extends Model {
     public id!: string;
     public groupId!: string;
-    public service!: 'EC2' | 'ALB' | 'Route53' | 'IAM' | 'S3' | 'NETWORK' | 'RDS' | 'ECS';
+    public service!: 'EC2' | 'ALB' | 'Route53' | 'IAM' | 'S3' | 'NETWORK' | 'RDS' | 'ECS' | 'DynamoDB' | 'Lambda' | 'CloudFront' | 'ConfigService';
     public scope!: 'GLOBAL' | 'REGIONAL';
     public region?: string;
     public type!: string;
     public parameters!: any;
+    public operator!: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'NOT_CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'GREATER_THAN_OR_EQUALS' | 'LESS_THAN_OR_EQUALS' | 'IN_LIST' | 'NOT_IN_LIST' | 'IS_EMPTY' | 'IS_NOT_EMPTY';
     public alias?: string;
     public deletedAt?: Date;
 }
@@ -218,7 +219,7 @@ Check.init(
             allowNull: false,
         },
         service: {
-            type: DataTypes.ENUM('EC2', 'ALB', 'Route53', 'IAM', 'S3', 'NETWORK', 'RDS', 'ECS'),
+            type: DataTypes.ENUM('EC2', 'ALB', 'Route53', 'IAM', 'S3', 'NETWORK', 'RDS', 'ECS', 'DynamoDB', 'Lambda', 'CloudFront', 'ConfigService'),
             allowNull: false,
         },
         scope: {
@@ -235,6 +236,11 @@ Check.init(
         parameters: {
             type: DataTypes.JSONB,
             defaultValue: {},
+        },
+        operator: {
+            type: DataTypes.ENUM('EQUALS', 'NOT_EQUALS', 'CONTAINS', 'NOT_CONTAINS', 'GREATER_THAN', 'LESS_THAN', 'GREATER_THAN_OR_EQUALS', 'LESS_THAN_OR_EQUALS', 'IN_LIST', 'NOT_IN_LIST', 'IS_EMPTY', 'IS_NOT_EMPTY'),
+            defaultValue: 'EQUALS',
+            allowNull: false,
         },
         alias: {
             type: DataTypes.STRING,

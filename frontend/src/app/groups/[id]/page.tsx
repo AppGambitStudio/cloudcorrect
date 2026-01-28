@@ -68,11 +68,12 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
 
     // Check Management State
     const [newCheck, setNewCheck] = useState({
-        service: 'EC2' as 'EC2' | 'ALB' | 'Route53' | 'IAM' | 'S3' | 'NETWORK' | 'RDS' | 'ECS',
+        service: 'EC2' as 'EC2' | 'ALB' | 'Route53' | 'IAM' | 'S3' | 'NETWORK' | 'RDS' | 'ECS' | 'DynamoDB' | 'Lambda' | 'CloudFront' | 'ConfigService',
         type: 'INSTANCE_RUNNING',
         scope: 'REGIONAL' as 'REGIONAL' | 'GLOBAL',
         region: 'us-east-1',
         alias: '',
+        operator: 'EQUALS' as 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'NOT_CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'GREATER_THAN_OR_EQUALS' | 'LESS_THAN_OR_EQUALS' | 'IN_LIST' | 'NOT_IN_LIST' | 'IS_EMPTY' | 'IS_NOT_EMPTY',
         parameters: {} as any,
     });
     const [editingCheckId, setEditingCheckId] = useState<string | null>(null);
@@ -144,8 +145,13 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             toast.success('Evaluation complete', { id: tid });
             fetchDetail();
             fetchHistory(1);
-        } catch (error) {
-            toast.error('Evaluation failed', { id: tid });
+        } catch (error: any) {
+            console.log(error);
+            if (error.response?.data?.skipped) {
+                toast.error(error.response.data.error || 'No checks defined', { id: tid });
+            } else {
+                toast.error('Evaluation failed', { id: tid });
+            }
         } finally {
             setIsEvaluating(false);
         }
@@ -171,6 +177,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 scope: 'REGIONAL',
                 region: 'us-east-1',
                 alias: '',
+                operator: 'EQUALS',
                 parameters: {},
             });
             setIsDialogOpen(false);
@@ -197,6 +204,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 scope: 'REGIONAL',
                 region: 'us-east-1',
                 alias: '',
+                operator: 'EQUALS',
                 parameters: {},
             });
         }
@@ -217,6 +225,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             scope: check.scope,
             region: check.region || 'us-east-1',
             alias: check.alias || '',
+            operator: check.operator || 'EQUALS',
             parameters: { ...check.parameters },
         });
         setIsDialogOpen(true);
@@ -234,6 +243,10 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             case 'NETWORK': type = 'HTTP_200'; scope = 'GLOBAL'; break;
             case 'RDS': type = 'RDS_INSTANCE_AVAILABLE'; scope = 'REGIONAL'; break;
             case 'ECS': type = 'ECS_SERVICE_RUNNING'; scope = 'REGIONAL'; break;
+            case 'DynamoDB': type = 'TABLE_EXISTS'; scope = 'REGIONAL'; break;
+            case 'Lambda': type = 'VPC_CONFIGURED'; scope = 'REGIONAL'; break;
+            case 'CloudFront': type = 'DISTRIBUTION_EXISTS'; scope = 'GLOBAL'; break;
+            case 'ConfigService': type = 'CONFIG_RECORDER_ACTIVE'; scope = 'REGIONAL'; break;
         }
         setNewCheck({ ...newCheck, service: service as any, type, scope, alias: '', parameters: {} });
     };
@@ -369,6 +382,10 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                             {res.check?.service === 'NETWORK' && <Zap size={20} />}
                                                             {res.check?.service === 'RDS' && <Database size={20} />}
                                                             {res.check?.service === 'ECS' && <Layers size={20} />}
+                                                            {res.check?.service === 'DynamoDB' && <Database size={20} className="text-purple-500" />}
+                                                            {res.check?.service === 'Lambda' && <Zap size={20} className="text-orange-500" />}
+                                                            {res.check?.service === 'CloudFront' && <Globe size={20} className="text-blue-500" />}
+                                                            {res.check?.service === 'ConfigService' && <Shield size={20} className="text-green-500" />}
                                                         </div>
                                                         <div>
                                                             <div className="flex items-center space-x-2">
@@ -457,6 +474,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                             scope: 'REGIONAL',
                                             region: 'us-east-1',
                                             alias: '',
+                                            operator: 'EQUALS',
                                             parameters: {},
                                         });
                                     }
@@ -492,6 +510,10 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                 <SelectItem value="NETWORK">Network Health</SelectItem>
                                                 <SelectItem value="RDS">RDS Database</SelectItem>
                                                 <SelectItem value="ECS">ECS Container Service</SelectItem>
+                                                <SelectItem value="DynamoDB">DynamoDB</SelectItem>
+                                                <SelectItem value="Lambda">Lambda Functions</SelectItem>
+                                                <SelectItem value="CloudFront">CloudFront CDN</SelectItem>
+                                                <SelectItem value="ConfigService">AWS Config</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -512,11 +534,15 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                         <SelectItem value="HAS_PUBLIC_IP">Has Public IP</SelectItem>
                                                         <SelectItem value="IN_SECURITY_GROUP">In Security Group</SelectItem>
                                                         <SelectItem value="IN_SUBNET">In Subnet</SelectItem>
+                                                        <SelectItem value="DEFAULT_VPC">Default VPC</SelectItem>
+                                                        <SelectItem value="RUNNING_INSTANCE_COUNT">Running Instance Count</SelectItem>
+                                                        <SelectItem value="INSTANCE_COUNT">Instance Count</SelectItem>
                                                     </>
                                                 )}
                                                 {newCheck.service === 'ALB' && (
                                                     <>
                                                         <SelectItem value="TARGET_GROUP_HEALTHY">Target Group Healthy</SelectItem>
+                                                        <SelectItem value="TARGET_GROUP_HEALTHY_COUNT">Target Group Healthy Count</SelectItem>
                                                         <SelectItem value="ALB_LISTENER_EXISTS">Listener Exists</SelectItem>
                                                     </>
                                                 )}
@@ -541,6 +567,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                         <SelectItem value="S3_BUCKET_PUBLIC_ACCESS_BLOCKED">Public Access Blocked</SelectItem>
                                                         <SelectItem value="S3_LIFECYCLE_CONFIGURED">Lifecycle Configured</SelectItem>
                                                         <SelectItem value="S3_OBJECT_EXISTS">Object Exists</SelectItem>
+                                                        <SelectItem value="S3_BUCKET_COUNT">Bucket Count</SelectItem>
+                                                        <SelectItem value="S3_OBJECT_COUNT">Object Count (in bucket)</SelectItem>
                                                     </>
                                                 )}
                                                 {newCheck.service === 'NETWORK' && (
@@ -562,9 +590,52 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                     <>
                                                         <SelectItem value="ECS_SERVICE_RUNNING">Running (Sufficient)</SelectItem>
                                                         <SelectItem value="ECS_SERVICE_RUNNING_COUNT_EQUALS_DESIRED">Running (Exact)</SelectItem>
+                                                        <SelectItem value="ECS_RUNNING_TASK_COUNT">Running Task Count</SelectItem>
                                                         <SelectItem value="ECS_TASK_DEFINITION_REVISION_ACTIVE">Task Def Revision Active</SelectItem>
                                                         <SelectItem value="ECS_SERVICE_ATTACHED_TO_ALB">Attached to ALB</SelectItem>
                                                         <SelectItem value="ECS_CLUSTER_ACTIVE">Cluster Active</SelectItem>
+                                                    </>
+                                                )}
+                                                {newCheck.service === 'DynamoDB' && (
+                                                    <>
+                                                        <SelectItem value="TABLE_EXISTS">Table Exists</SelectItem>
+                                                        <SelectItem value="TABLE_STATUS_ACTIVE">Table Status Active</SelectItem>
+                                                        <SelectItem value="BILLING_MODE_MATCHES">Billing Mode Matches</SelectItem>
+                                                        <SelectItem value="POINT_IN_TIME_RECOVERY_ENABLED">Point-in-Time Recovery Enabled</SelectItem>
+                                                        <SelectItem value="ENCRYPTION_ENABLED">Encryption Enabled</SelectItem>
+                                                        <SelectItem value="DELETION_PROTECTION_ENABLED">Deletion Protection Enabled</SelectItem>
+                                                    </>
+                                                )}
+                                                {newCheck.service === 'Lambda' && (
+                                                    <>
+                                                        <SelectItem value="VPC_CONFIGURED">VPC Configured</SelectItem>
+                                                        <SelectItem value="RESERVED_CONCURRENCY_SET">Reserved Concurrency Set</SelectItem>
+                                                        <SelectItem value="FUNCTION_URL_AUTH_TYPE">Function URL Auth Type</SelectItem>
+                                                        <SelectItem value="ENVIRONMENT_VARIABLE_EXISTS">Environment Variable Exists</SelectItem>
+                                                        <SelectItem value="LAYER_ATTACHED">Layer Attached</SelectItem>
+                                                        <SelectItem value="DEAD_LETTER_QUEUE_CONFIGURED">Dead Letter Queue Configured</SelectItem>
+                                                        <SelectItem value="LAMBDA_FUNCTION_COUNT">Function Count</SelectItem>
+                                                    </>
+                                                )}
+                                                {newCheck.service === 'CloudFront' && (
+                                                    <>
+                                                        <SelectItem value="DISTRIBUTION_EXISTS">Distribution Exists</SelectItem>
+                                                        <SelectItem value="DISTRIBUTION_ENABLED">Distribution Enabled</SelectItem>
+                                                        <SelectItem value="ORIGIN_EXISTS">Origin Exists</SelectItem>
+                                                        <SelectItem value="DEFAULT_ROOT_OBJECT_SET">Default Root Object Set</SelectItem>
+                                                        <SelectItem value="VIEWER_PROTOCOL_HTTPS_ONLY">Viewer Protocol HTTPS Only</SelectItem>
+                                                        <SelectItem value="WAF_ENABLED">WAF Enabled</SelectItem>
+                                                        <SelectItem value="ORIGIN_ACCESS_CONTROL_CONFIGURED">Origin Access Control Configured</SelectItem>
+                                                    </>
+                                                )}
+                                                {newCheck.service === 'ConfigService' && (
+                                                    <>
+                                                        <SelectItem value="CONFIG_RECORDER_ACTIVE">Config Recorder Active</SelectItem>
+                                                        <SelectItem value="CONFIG_RULE_COMPLIANT">Config Rule Compliant</SelectItem>
+                                                        <SelectItem value="DELIVERY_CHANNEL_CONFIGURED">Delivery Channel Configured</SelectItem>
+                                                        <SelectItem value="RESOURCE_COMPLIANT">Resource Compliant</SelectItem>
+                                                        <SelectItem value="CONFORMANCE_PACK_COMPLIANT">Conformance Pack Compliant</SelectItem>
+                                                        <SelectItem value="AGGREGATOR_CONFIGURED">Aggregator Configured</SelectItem>
                                                     </>
                                                 )}
                                             </SelectContent>
@@ -580,6 +651,33 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                             onChange={(e) => setNewCheck({ ...newCheck, alias: e.target.value })}
                                         />
                                         <p className="text-[10px] text-slate-400">Used for referencing in other checks</p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Operator</Label>
+                                        <Select
+                                            value={newCheck.operator}
+                                            onValueChange={(val) => setNewCheck({ ...newCheck, operator: val as any })}
+                                        >
+                                            <SelectTrigger className="h-12 border-slate-200">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="EQUALS">Equals</SelectItem>
+                                                <SelectItem value="NOT_EQUALS">Not Equals</SelectItem>
+                                                <SelectItem value="CONTAINS">Contains</SelectItem>
+                                                <SelectItem value="NOT_CONTAINS">Not Contains</SelectItem>
+                                                <SelectItem value="GREATER_THAN">Greater Than</SelectItem>
+                                                <SelectItem value="LESS_THAN">Less Than</SelectItem>
+                                                <SelectItem value="GREATER_THAN_OR_EQUALS">Greater Than or Equals</SelectItem>
+                                                <SelectItem value="LESS_THAN_OR_EQUALS">Less Than or Equals</SelectItem>
+                                                <SelectItem value="IN_LIST">In List</SelectItem>
+                                                <SelectItem value="NOT_IN_LIST">Not In List</SelectItem>
+                                                <SelectItem value="IS_EMPTY">Is Empty</SelectItem>
+                                                <SelectItem value="IS_NOT_EMPTY">Is Not Empty</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-[10px] text-slate-400">How to compare the observed value against the expected value</p>
                                     </div>
 
                                     {newCheck.scope === 'REGIONAL' && (
@@ -598,12 +696,14 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                         <Label>Parameters</Label>
                                         {newCheck.service === 'EC2' ? (
                                             <div className="space-y-2">
-                                                <Input
-                                                    className="h-12 border-slate-200"
-                                                    placeholder="Instance ID (i-xxx)"
-                                                    value={newCheck.parameters.instanceId || ''}
-                                                    onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, instanceId: e.target.value } })}
-                                                />
+                                                {['INSTANCE_RUNNING', 'INSTANCE_HAS_PUBLIC_IP', 'HAS_PUBLIC_IP', 'IN_SECURITY_GROUP', 'IN_SUBNET'].includes(newCheck.type) && (
+                                                    <Input
+                                                        className="h-12 border-slate-200"
+                                                        placeholder="Instance ID (i-xxx)"
+                                                        value={newCheck.parameters.instanceId || ''}
+                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, instanceId: e.target.value } })}
+                                                    />
+                                                )}
                                                 {newCheck.type === 'IN_SECURITY_GROUP' && (
                                                     <Input
                                                         className="h-12 border-slate-200"
@@ -620,16 +720,69 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                         onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, subnetId: e.target.value } })}
                                                     />
                                                 )}
+                                                {newCheck.type === 'DEFAULT_VPC' && (
+                                                    <>
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Expected Count (e.g., 0 for no default VPC)"
+                                                            type="number"
+                                                            min="0"
+                                                            value={newCheck.parameters.expectedCount ?? ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedCount: parseInt(e.target.value) || 0 } })}
+                                                        />
+                                                        <p className="text-[10px] text-slate-400">Use operator EQUALS with count 0 to verify default VPC does not exist.</p>
+                                                    </>
+                                                )}
+                                                {['RUNNING_INSTANCE_COUNT', 'INSTANCE_COUNT'].includes(newCheck.type) && (
+                                                    <>
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Expected Count"
+                                                            type="number"
+                                                            min="0"
+                                                            value={newCheck.parameters.expectedCount || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedCount: parseInt(e.target.value) || 0 } })}
+                                                        />
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Tag Key (optional filter)"
+                                                            value={newCheck.parameters.tagKey || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, tagKey: e.target.value } })}
+                                                        />
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Tag Value (optional filter)"
+                                                            value={newCheck.parameters.tagValue || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, tagValue: e.target.value } })}
+                                                        />
+                                                        <p className="text-[10px] text-slate-400">Use operator (LESS_THAN, GREATER_THAN, EQUALS) to compare instance count with expected value.</p>
+                                                    </>
+                                                )}
                                             </div>
                                         ) : newCheck.service === 'ALB' ? (
                                             <div className="space-y-2">
-                                                {newCheck.type === 'TARGET_GROUP_HEALTHY' ? (
-                                                    <Input
-                                                        className="h-12 border-slate-200"
-                                                        placeholder="Target Group ARN"
-                                                        value={newCheck.parameters.targetGroupArn || ''}
-                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, targetGroupArn: e.target.value } })}
-                                                    />
+                                                {(newCheck.type === 'TARGET_GROUP_HEALTHY' || newCheck.type === 'TARGET_GROUP_HEALTHY_COUNT') ? (
+                                                    <>
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Target Group ARN"
+                                                            value={newCheck.parameters.targetGroupArn || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, targetGroupArn: e.target.value } })}
+                                                        />
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Expected Count (e.g. 2)"
+                                                            type="number"
+                                                            min="0"
+                                                            value={newCheck.parameters.expectedCount || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedCount: e.target.value } })}
+                                                        />
+                                                        <p className="text-[10px] text-slate-400">
+                                                            {newCheck.type === 'TARGET_GROUP_HEALTHY_COUNT'
+                                                                ? 'Number of healthy targets to compare using the selected operator.'
+                                                                : 'Minimum number of healthy targets required. Leave empty for at least 1.'}
+                                                        </p>
+                                                    </>
                                                 ) : (
                                                     <>
                                                         <Input
@@ -697,19 +850,64 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                             </div>
                                         ) : newCheck.service === 'S3' ? (
                                             <div className="space-y-2">
-                                                <Input
-                                                    className="h-12 border-slate-200"
-                                                    placeholder="Bucket Name"
-                                                    value={newCheck.parameters.bucketName || ''}
-                                                    onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, bucketName: e.target.value } })}
-                                                />
-                                                {newCheck.type === 'S3_OBJECT_EXISTS' && (
-                                                    <Input
-                                                        className="h-12 border-slate-200"
-                                                        placeholder="Object Key"
-                                                        value={newCheck.parameters.objectKey || ''}
-                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, objectKey: e.target.value } })}
-                                                    />
+                                                {newCheck.type === 'S3_BUCKET_COUNT' ? (
+                                                    <>
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Expected Count"
+                                                            type="number"
+                                                            min="0"
+                                                            value={newCheck.parameters.expectedCount || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedCount: parseInt(e.target.value) || 0 } })}
+                                                        />
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Name Prefix (optional filter)"
+                                                            value={newCheck.parameters.namePrefix || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, namePrefix: e.target.value } })}
+                                                        />
+                                                        <p className="text-[10px] text-slate-400">Use operator (LESS_THAN, EQUALS) to compare bucket count. E.g., "S3 buckets &lt; 20"</p>
+                                                    </>
+                                                ) : newCheck.type === 'S3_OBJECT_COUNT' ? (
+                                                    <>
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Bucket Name"
+                                                            value={newCheck.parameters.bucketName || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, bucketName: e.target.value } })}
+                                                        />
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Expected Count"
+                                                            type="number"
+                                                            min="0"
+                                                            value={newCheck.parameters.expectedCount || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedCount: parseInt(e.target.value) || 0 } })}
+                                                        />
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Prefix (optional filter)"
+                                                            value={newCheck.parameters.prefix || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, prefix: e.target.value } })}
+                                                        />
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Bucket Name"
+                                                            value={newCheck.parameters.bucketName || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, bucketName: e.target.value } })}
+                                                        />
+                                                        {newCheck.type === 'S3_OBJECT_EXISTS' && (
+                                                            <Input
+                                                                className="h-12 border-slate-200"
+                                                                placeholder="Object Key"
+                                                                value={newCheck.parameters.objectKey || ''}
+                                                                onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, objectKey: e.target.value } })}
+                                                            />
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         ) : newCheck.service === 'NETWORK' ? (
@@ -773,6 +971,207 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                         onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedTaskDefinition: e.target.value } })}
                                                     />
                                                 )}
+                                                {(newCheck.type === 'ECS_SERVICE_RUNNING' || newCheck.type === 'ECS_SERVICE_RUNNING_COUNT_EQUALS_DESIRED' || newCheck.type === 'ECS_RUNNING_TASK_COUNT') && (
+                                                    <>
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder={newCheck.type === 'ECS_RUNNING_TASK_COUNT' ? 'Expected Count (required)' : 'Expected Count (optional)'}
+                                                            type="number"
+                                                            min="0"
+                                                            value={newCheck.parameters.expectedCount || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedCount: e.target.value } })}
+                                                        />
+                                                        <p className="text-[10px] text-slate-400">
+                                                            {newCheck.type === 'ECS_RUNNING_TASK_COUNT'
+                                                                ? 'Number of running tasks to compare using the selected operator.'
+                                                                : 'Expected number of running tasks. Uses operator to compare against actual count.'}
+                                                        </p>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ) : newCheck.service === 'DynamoDB' ? (
+                                            <div className="space-y-2">
+                                                <Input
+                                                    className="h-12 border-slate-200"
+                                                    placeholder="Table Name"
+                                                    value={newCheck.parameters.tableName || ''}
+                                                    onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, tableName: e.target.value } })}
+                                                />
+                                                {newCheck.type === 'BILLING_MODE_MATCHES' && (
+                                                    <Select
+                                                        value={newCheck.parameters.expectedBillingMode || ''}
+                                                        onValueChange={(val) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedBillingMode: val } })}
+                                                    >
+                                                        <SelectTrigger className="h-12 border-slate-200">
+                                                            <SelectValue placeholder="Expected Billing Mode" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="PAY_PER_REQUEST">Pay Per Request (On-Demand)</SelectItem>
+                                                            <SelectItem value="PROVISIONED">Provisioned</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                            </div>
+                                        ) : newCheck.service === 'Lambda' ? (
+                                            <div className="space-y-2">
+                                                {newCheck.type === 'LAMBDA_FUNCTION_COUNT' ? (
+                                                    <>
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Expected Count"
+                                                            type="number"
+                                                            min="0"
+                                                            value={newCheck.parameters.expectedCount || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedCount: parseInt(e.target.value) || 0 } })}
+                                                        />
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Name Prefix (optional filter)"
+                                                            value={newCheck.parameters.namePrefix || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, namePrefix: e.target.value } })}
+                                                        />
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Runtime (optional filter, e.g., nodejs18.x)"
+                                                            value={newCheck.parameters.runtime || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, runtime: e.target.value } })}
+                                                        />
+                                                        <p className="text-[10px] text-slate-400">Use operator (LESS_THAN, EQUALS) to compare function count.</p>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Function Name"
+                                                            value={newCheck.parameters.functionName || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, functionName: e.target.value } })}
+                                                        />
+                                                        {newCheck.type === 'RESERVED_CONCURRENCY_SET' && (
+                                                            <Input
+                                                                className="h-12 border-slate-200"
+                                                                placeholder="Expected Concurrency (optional)"
+                                                                value={newCheck.parameters.expectedConcurrency || ''}
+                                                                onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedConcurrency: e.target.value } })}
+                                                            />
+                                                        )}
+                                                        {newCheck.type === 'FUNCTION_URL_AUTH_TYPE' && (
+                                                            <Input
+                                                                className="h-12 border-slate-200"
+                                                                placeholder="Expected Auth Type (AWS_IAM or NONE)"
+                                                                value={newCheck.parameters.expectedAuthType || ''}
+                                                                onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedAuthType: e.target.value } })}
+                                                            />
+                                                        )}
+                                                        {newCheck.type === 'ENVIRONMENT_VARIABLE_EXISTS' && (
+                                                            <Input
+                                                                className="h-12 border-slate-200"
+                                                                placeholder="Variable Name"
+                                                                value={newCheck.parameters.variableName || ''}
+                                                                onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, variableName: e.target.value } })}
+                                                            />
+                                                        )}
+                                                        {newCheck.type === 'LAYER_ATTACHED' && (
+                                                            <Input
+                                                                className="h-12 border-slate-200"
+                                                                placeholder="Layer ARN"
+                                                                value={newCheck.parameters.layerArn || ''}
+                                                                onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, layerArn: e.target.value } })}
+                                                            />
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        ) : newCheck.service === 'CloudFront' ? (
+                                            <div className="space-y-2">
+                                                <Input
+                                                    className="h-12 border-slate-200"
+                                                    placeholder="Distribution ID"
+                                                    value={newCheck.parameters.distributionId || ''}
+                                                    onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, distributionId: e.target.value } })}
+                                                />
+                                                {newCheck.type === 'ORIGIN_EXISTS' && (
+                                                    <Input
+                                                        className="h-12 border-slate-200"
+                                                        placeholder="Origin ID"
+                                                        value={newCheck.parameters.originId || ''}
+                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, originId: e.target.value } })}
+                                                    />
+                                                )}
+                                                {newCheck.type === 'DEFAULT_ROOT_OBJECT_SET' && (
+                                                    <Input
+                                                        className="h-12 border-slate-200"
+                                                        placeholder="Expected Object (e.g. index.html)"
+                                                        value={newCheck.parameters.expectedObject || ''}
+                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, expectedObject: e.target.value } })}
+                                                    />
+                                                )}
+                                                {newCheck.type === 'ORIGIN_ACCESS_CONTROL_CONFIGURED' && (
+                                                    <Input
+                                                        className="h-12 border-slate-200"
+                                                        placeholder="Origin ID"
+                                                        value={newCheck.parameters.originId || ''}
+                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, originId: e.target.value } })}
+                                                    />
+                                                )}
+                                            </div>
+                                        ) : newCheck.service === 'ConfigService' ? (
+                                            <div className="space-y-2">
+                                                {newCheck.type === 'CONFIG_RECORDER_ACTIVE' && (
+                                                    <Input
+                                                        className="h-12 border-slate-200"
+                                                        placeholder="Recorder Name (optional, defaults to 'default')"
+                                                        value={newCheck.parameters.recorderName || ''}
+                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, recorderName: e.target.value } })}
+                                                    />
+                                                )}
+                                                {newCheck.type === 'CONFIG_RULE_COMPLIANT' && (
+                                                    <Input
+                                                        className="h-12 border-slate-200"
+                                                        placeholder="Config Rule Name"
+                                                        value={newCheck.parameters.ruleName || ''}
+                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, ruleName: e.target.value } })}
+                                                    />
+                                                )}
+                                                {newCheck.type === 'DELIVERY_CHANNEL_CONFIGURED' && (
+                                                    <Input
+                                                        className="h-12 border-slate-200"
+                                                        placeholder="Channel Name (optional, defaults to 'default')"
+                                                        value={newCheck.parameters.channelName || ''}
+                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, channelName: e.target.value } })}
+                                                    />
+                                                )}
+                                                {newCheck.type === 'RESOURCE_COMPLIANT' && (
+                                                    <>
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Resource ID"
+                                                            value={newCheck.parameters.resourceId || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, resourceId: e.target.value } })}
+                                                        />
+                                                        <Input
+                                                            className="h-12 border-slate-200"
+                                                            placeholder="Resource Type (e.g. AWS::EC2::Instance)"
+                                                            value={newCheck.parameters.resourceType || ''}
+                                                            onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, resourceType: e.target.value } })}
+                                                        />
+                                                    </>
+                                                )}
+                                                {newCheck.type === 'CONFORMANCE_PACK_COMPLIANT' && (
+                                                    <Input
+                                                        className="h-12 border-slate-200"
+                                                        placeholder="Conformance Pack Name"
+                                                        value={newCheck.parameters.conformancePackName || ''}
+                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, conformancePackName: e.target.value } })}
+                                                    />
+                                                )}
+                                                {newCheck.type === 'AGGREGATOR_CONFIGURED' && (
+                                                    <Input
+                                                        className="h-12 border-slate-200"
+                                                        placeholder="Aggregator Name"
+                                                        value={newCheck.parameters.aggregatorName || ''}
+                                                        onChange={(e) => setNewCheck({ ...newCheck, parameters: { ...newCheck.parameters, aggregatorName: e.target.value } })}
+                                                    />
+                                                )}
                                             </div>
                                         ) : null}
                                     </div>
@@ -797,6 +1196,10 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                             {c.service === 'Route53' && 'values, type, ttl'}
                                                             {c.service === 'RDS' && 'dbInstanceIdentifier, state, publicAccess, encrypted, engine, instanceClass'}
                                                             {c.service === 'ECS' && (c.type === 'ECS_CLUSTER_ACTIVE' ? 'clusterName, status, services, tasks' : 'clusterName, serviceName, running, desired, status')}
+                                                            {c.service === 'DynamoDB' && 'tableName, tableStatus, billingMode, itemCount, sizeBytes, pitrEnabled, encrypted'}
+                                                            {c.service === 'Lambda' && 'functionName, runtime, memorySize, timeout, vpcId, concurrency, state'}
+                                                            {c.service === 'CloudFront' && 'distributionId, domainName, status, enabled, origins, priceClass'}
+                                                            {c.service === 'ConfigService' && 'recorderName, recorderStatus, deliveryChannel, rulesCount, complianceStatus'}
                                                         </span>
                                                     </div>
                                                 ))}
@@ -836,11 +1239,20 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                                 {check.service === 'NETWORK' && <Zap size={24} />}
                                                 {check.service === 'RDS' && <Database size={24} className="text-blue-500" />}
                                                 {check.service === 'ECS' && <Layers size={24} className="text-orange-500" />}
+                                                {check.service === 'DynamoDB' && <Database size={24} className="text-purple-500" />}
+                                                {check.service === 'Lambda' && <Zap size={24} className="text-orange-500" />}
+                                                {check.service === 'CloudFront' && <Globe size={24} className="text-blue-500" />}
+                                                {check.service === 'ConfigService' && <Shield size={24} className="text-green-500" />}
                                             </div>
                                             <div>
                                                 <h4 className="text-lg font-bold text-slate-900">{check.type}</h4>
-                                                <div className="flex items-center space-x-2 mt-1">
+                                                <div className="flex items-center space-x-2 mt-1 flex-wrap gap-1">
                                                     <Badge variant="outline" className="text-[10px] h-4 font-black">{check.service}</Badge>
+                                                    {check.operator && check.operator !== 'EQUALS' && (
+                                                        <Badge className="bg-purple-100 text-purple-700 text-[10px] h-4 border-purple-200">
+                                                            {check.operator.replace(/_/g, ' ')}
+                                                        </Badge>
+                                                    )}
                                                     {check.alias && <Badge className="bg-blue-100 text-blue-700 text-[10px] h-4 border-blue-200">Alias: {check.alias}</Badge>}
                                                     {check.scope === 'REGIONAL' && <Badge variant="secondary" className="text-[10px] h-4">{check.region}</Badge>}
                                                 </div>

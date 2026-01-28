@@ -6,6 +6,10 @@ import { IAMClient } from '@aws-sdk/client-iam';
 import { RDSClient } from '@aws-sdk/client-rds';
 import { ECSClient } from '@aws-sdk/client-ecs';
 import { SESClient } from '@aws-sdk/client-ses';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { LambdaClient } from '@aws-sdk/client-lambda';
+import { CloudFrontClient } from '@aws-sdk/client-cloudfront';
+import { ConfigServiceClient } from '@aws-sdk/client-config-service';
 import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
 import { AWSAccount } from '../db';
 
@@ -79,5 +83,21 @@ export class AWSAdapter {
 
     static async getSESClient(credentials: any, region: string) {
         return new SESClient({ region, credentials });
+    }
+
+    static async getDynamoDBClient(credentials: any, region: string) {
+        return new DynamoDBClient({ region, credentials });
+    }
+
+    static async getLambdaClient(credentials: any, region: string) {
+        return new LambdaClient({ region, credentials });
+    }
+
+    static async getCloudFrontClient(credentials: any) {
+        return new CloudFrontClient({ region: 'us-east-1', credentials });
+    }
+
+    static async getConfigServiceClient(credentials: any, region: string) {
+        return new ConfigServiceClient({ region, credentials });
     }
 }
