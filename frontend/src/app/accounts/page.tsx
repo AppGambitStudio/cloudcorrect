@@ -105,7 +105,7 @@ export default function AccountsPage() {
         }
 
         const stackName = 'CloudCorrect-ReadOnly';
-        const templatePath = 'https://cloudcorrect-templates.s3.amazonaws.com/cloudcorrect-readonly-role.yaml';
+        const templatePath = 'https://ag-labs-templete.s3.us-east-1.amazonaws.com/cloudcorrect/cloudcorrect-readonly-role.yaml';
         const url = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=${stackName}&templateURL=${templatePath}&param_ExternalId=${extId}&param_TenantId=${user?.tenantId}`;
 
         window.open(url, '_blank');

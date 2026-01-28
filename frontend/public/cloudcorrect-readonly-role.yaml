@@ -8,7 +8,7 @@ Parameters:
   TrustAccount:
     Type: String
     Description: 'The AWS Account ID of the CloudCorrect service'
-    Default: '123456789012' # Placeholder: Replace with your CloudCorrect Central Account ID
+    Default: '701604549018' # Placeholder: Replace with your CloudCorrect Central Account ID
 
 Resources:
   CloudCorrectReadOnlyRole:
@@ -16,7 +16,7 @@ Resources:
     Properties:
       RoleName: !Sub 'CloudCorrect-ReadOnly-Role-${ExternalId}'
       AssumeRolePolicyDocument:
-        Version: '2010-09-09'
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
