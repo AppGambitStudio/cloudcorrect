@@ -30,7 +30,8 @@ import {
     Pause,
     Box,
     Layers,
-    Bell
+    Bell,
+    FileText
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -53,6 +54,8 @@ import { useRouter } from 'next/navigation';
 import { SERVICES, OPERATORS, getCheckType, getService, type ServiceId } from '@/lib/checksReference';
 import { HelpTooltip, InlineHelpTooltip } from '@/components/ui/help-tooltip';
 import { CheckWizard, type CheckWizardData } from '@/components/CheckWizard';
+import { TemplateSelector, type TemplateSelectorData } from '@/components/TemplateSelector';
+import { CHECK_TEMPLATES } from '@/lib/checkTemplates';
 
 export default function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = use(params);
@@ -81,6 +84,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     });
     const [editingCheckId, setEditingCheckId] = useState<string | null>(null);
     const [isWizardOpen, setIsWizardOpen] = useState(false);
+    const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -206,6 +210,53 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             toast.success('Check created successfully via wizard');
         } catch (error) {
             toast.error('Failed to create check');
+        }
+    };
+
+    const handleTemplateComplete = async (data: TemplateSelectorData) => {
+        const tid = toast.loading(`Applying template: ${data.templateName}...`);
+        let successCount = 0;
+        let failCount = 0;
+
+        try {
+            // Create checks one by one from the template
+            for (const templateCheck of data.checks) {
+                try {
+                    // Determine scope based on service
+                    let scope: 'REGIONAL' | 'GLOBAL' = 'REGIONAL';
+                    if (['Route53', 'IAM', 'CloudFront', 'NETWORK'].includes(templateCheck.service)) {
+                        scope = 'GLOBAL';
+                    }
+
+                    const checkData = {
+                        service: templateCheck.service,
+                        type: templateCheck.type,
+                        scope,
+                        region: 'us-east-1',
+                        alias: '',
+                        operator: templateCheck.operator || 'EQUALS',
+                        parameters: templateCheck.parameters,
+                    };
+
+                    const response = await api.post(`/invariant-groups/${id}/checks`, checkData);
+                    setGroup((prev: any) => ({
+                        ...prev,
+                        checks: [...(prev.checks || []), response.data]
+                    }));
+                    successCount++;
+                } catch (err) {
+                    console.error('Failed to create check from template:', err);
+                    failCount++;
+                }
+            }
+
+            if (failCount === 0) {
+                toast.success(`Template applied! ${successCount} checks created.`, { id: tid });
+            } else {
+                toast.error(`Template partially applied: ${successCount} succeeded, ${failCount} failed.`, { id: tid });
+            }
+        } catch (error) {
+            toast.error('Failed to apply template', { id: tid });
         }
     };
 
@@ -1388,13 +1439,19 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                 </p>
                                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                                     <Button
+                                        onClick={() => setIsTemplateSelectorOpen(true)}
+                                        className="bg-amber-500 hover:bg-amber-600 h-11 px-8 rounded-xl shadow-lg shadow-amber-100 font-semibold"
+                                    >
+                                        <FileText size={18} className="mr-2" />
+                                        Use a Template
+                                    </Button>
+                                    <Button
                                         onClick={() => setIsWizardOpen(true)}
                                         className="bg-blue-600 hover:bg-blue-700 h-11 px-8 rounded-xl shadow-lg shadow-blue-100 font-semibold"
                                     >
                                         <Plus size={18} className="mr-2" />
                                         Create Check with Wizard
                                     </Button>
-                                    <span className="text-slate-400 text-sm">or</span>
                                     <Button
                                         variant="outline"
                                         onClick={() => setIsDialogOpen(true)}
@@ -1403,21 +1460,37 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                         Add Manually
                                     </Button>
                                 </div>
-                                <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto px-4">
-                                    <div className="p-4 rounded-xl bg-white/80 border border-slate-100 text-left">
-                                        <Server size={20} className="text-slate-400 mb-2" />
-                                        <h4 className="font-semibold text-slate-700 text-sm">EC2 Instance Checks</h4>
-                                        <p className="text-xs text-slate-500 mt-1">Verify instances are running and properly configured</p>
+
+                                {/* Template Cards */}
+                                <div className="mt-10 px-4">
+                                    <div className="flex items-center justify-center mb-4">
+                                        <FileText size={16} className="text-slate-400 mr-2" />
+                                        <span className="text-sm font-semibold text-slate-600">Quick Start Templates</span>
                                     </div>
-                                    <div className="p-4 rounded-xl bg-white/80 border border-slate-100 text-left">
-                                        <Database size={20} className="text-slate-400 mb-2" />
-                                        <h4 className="font-semibold text-slate-700 text-sm">Database Monitoring</h4>
-                                        <p className="text-xs text-slate-500 mt-1">Ensure RDS and DynamoDB tables are healthy</p>
-                                    </div>
-                                    <div className="p-4 rounded-xl bg-white/80 border border-slate-100 text-left">
-                                        <Globe size={20} className="text-slate-400 mb-2" />
-                                        <h4 className="font-semibold text-slate-700 text-sm">DNS & Network</h4>
-                                        <p className="text-xs text-slate-500 mt-1">Validate Route53 records and connectivity</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                                        {CHECK_TEMPLATES.slice(0, 4).map((template) => (
+                                            <button
+                                                key={template.id}
+                                                onClick={() => setIsTemplateSelectorOpen(true)}
+                                                className="p-4 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-300 hover:shadow-md transition-all group"
+                                            >
+                                                <div className="flex items-center mb-2">
+                                                    {template.category === 'Security' && <Shield size={18} className="text-red-500 mr-2" />}
+                                                    {template.category === 'Monitoring' && <Activity size={18} className="text-blue-500 mr-2" />}
+                                                    {template.category === 'Database' && <Database size={18} className="text-purple-500 mr-2" />}
+                                                    {template.category === 'Networking' && <Globe size={18} className="text-green-500 mr-2" />}
+                                                    <Badge variant="secondary" className="text-[10px] h-4 ml-auto">
+                                                        {template.checks.length} checks
+                                                    </Badge>
+                                                </div>
+                                                <h4 className="font-semibold text-slate-700 text-sm group-hover:text-blue-600 transition-colors">
+                                                    {template.name}
+                                                </h4>
+                                                <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                                                    {template.description}
+                                                </p>
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
@@ -1473,6 +1546,13 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 open={isWizardOpen}
                 onOpenChange={setIsWizardOpen}
                 onComplete={handleWizardComplete}
+            />
+
+            {/* Template Selector */}
+            <TemplateSelector
+                open={isTemplateSelectorOpen}
+                onOpenChange={setIsTemplateSelectorOpen}
+                onComplete={handleTemplateComplete}
             />
         </div>
     );
