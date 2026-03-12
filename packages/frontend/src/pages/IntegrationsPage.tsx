@@ -59,7 +59,7 @@ export default function IntegrationsPage() {
                 name: newKeyName,
                 scopes: ['mcp:read', 'mcp:write', 'mcp:execute'],
             });
-            setCreatedKey(res.data.rawKey);
+            setCreatedKey(res.data.key);
             setNewKeyName('');
             fetchKeys();
         } catch {
@@ -87,10 +87,13 @@ export default function IntegrationsPage() {
     const claudeDesktopConfig = JSON.stringify({
         mcpServers: {
             cloudcorrect: {
-                url: mcpEndpoint,
-                headers: {
-                    Authorization: "Bearer YOUR_API_KEY"
-                }
+                command: "npx",
+                args: [
+                    "mcp-remote",
+                    mcpEndpoint,
+                    "--header",
+                    "Authorization: Bearer YOUR_API_KEY"
+                ]
             }
         }
     }, null, 2);
@@ -98,11 +101,13 @@ export default function IntegrationsPage() {
     const claudeCodeConfig = JSON.stringify({
         mcpServers: {
             cloudcorrect: {
-                type: "url",
-                url: mcpEndpoint,
-                headers: {
-                    Authorization: "Bearer YOUR_API_KEY"
-                }
+                command: "npx",
+                args: [
+                    "mcp-remote",
+                    mcpEndpoint,
+                    "--header",
+                    "Authorization: Bearer YOUR_API_KEY"
+                ]
             }
         }
     }, null, 2);
@@ -180,7 +185,8 @@ export default function IntegrationsPage() {
                             <CardContent className="space-y-4">
                                 <p className="text-sm text-slate-500">
                                     Add this to your Claude Desktop config file at{' '}
-                                    <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                                    <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">~/Library/Application Support/Claude/claude_desktop_config.json</code>.
+                                    This uses <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">mcp-remote</code> to bridge the Streamable HTTP transport.
                                 </p>
                                 <div className="relative">
                                     <pre className="bg-slate-900 text-green-400 rounded-xl p-4 text-xs font-mono overflow-x-auto">
@@ -213,7 +219,8 @@ export default function IntegrationsPage() {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <p className="text-sm text-slate-500">
-                                    Add this to <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">~/.claude/settings.json</code> or your project's <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">.mcp.json</code>
+                                    Add this to <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">~/.claude.json</code> or your project's <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">.mcp.json</code>.
+                                    Uses <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">mcp-remote</code> to connect to the CloudCorrect API.
                                 </p>
                                 <div className="relative">
                                     <pre className="bg-slate-900 text-green-400 rounded-xl p-4 text-xs font-mono overflow-x-auto">
