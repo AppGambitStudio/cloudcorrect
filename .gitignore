@@ -14,25 +14,27 @@ node_modules/
 # Environment files
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+
+# SST
+.sst/
 
 # Build outputs
 dist/
 build/
-.next/
+extra/
 
-# Database
-*.db
-*.sqlite
+# Vite
+*.local
 
 # Logs
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
-logs/
+pnpm-debug.log*
 *.log
 
-# Docs
-docs/
+# TypeScript
+*.tsbuildinfo
+
+# pnpm
+.pnpm-store/

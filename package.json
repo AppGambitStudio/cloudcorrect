@@ -1,0 +1,16 @@
+{
+  "name": "cloudcorrect",
+  "private": true,
+  "scripts": {
+    "sst:dev": "sst dev",
+    "sst:deploy:dev": "sst deploy --stage dev",
+    "sst:deploy:staging": "sst deploy --stage staging",
+    "sst:deploy:prod": "sst deploy --stage prod",
+    "sst:remove:dev": "sst remove --stage dev"
+  },
+  "devDependencies": {
+    "sst": "^4",
+    "typescript": "^5.7.0",
+    "@types/node": "^22"
+  }
+}

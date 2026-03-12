@@ -1,0 +1,22 @@
+{
+  "name": "@cloudcorrect/functions",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3",
+    "@aws-sdk/client-sqs": "^3",
+    "@cloudcorrect/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1",
+    "sst": "^4",
+    "zod": "^3"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8",
+    "typescript": "^5.7.0"
+  }
+}
